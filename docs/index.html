@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF8C00">
+    <title>はろなぞ４ ビンゴカードサポート</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/bingo-bonus-fix.css">
+</head>
+<body>
+    <div id="update-banner" class="update-banner" hidden>
+        <span>新しいバージョンがあります。</span>
+        <button id="update-reload-btn" class="btn btn-primary btn-inline" type="button">更新する</button>
+    </div>
+
+    <div class="container">
+        <h1>🎃 はろなぞ4<br><small>ビンゴカードサポート</small></h1>
+
+        <main>
+            <!-- ビンゴカード管理 -->
+            <section class="card-management">
+                <h2>⚙️ ビンゴカード管理</h2>
+
+                <div class="card-management-controls">
+                    <select id="round-select" aria-label="ラウンド選択">
+                        <option value="tutorial">チュートリアル</option>
+                        <option value="round1">ラウンド1</option>
+                        <option value="round2">ラウンド2</option>
+                        <option value="round3">ラウンド3</option>
+                        <option value="round4">ラウンド4</option>
+                    </select>
+
+                    <select id="card-id" aria-label="カードID選択">
+                        <option value="">-- カードを選択 --</option>
+                    </select>
+
+                    <button id="add-card-btn" class="btn btn-primary">カード追加</button>
+                </div>
+            </section>
+
+
+            <!-- ビンゴカード表示セクション -->
+            <section class="bingo-cards">
+                <div class="section-header">
+                    <h2>🗂️ ビンゴカード</h2>
+                    <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                </div>
+                <div id="cards-container">
+                    <p class="no-cards">カードが追加されていません</p>
+                </div>
+            </section>
+
+            <!-- ゲーム状態表示 -->
+            <section class="game-status">
+                <h2>📊 ゲーム状態</h2>
+                <div class="status-grid">
+                    <div class="status-item token-status token-status--lightning">
+                        <div class="token-line">
+                            <span class="status-label">⚡ 雷</span>
+                            <span class="status-value"><span id="lightning-tokens">4</span> 個</span>
+                            <div class="token-controls">
+                                <button id="lightning-plus" class="token-btn">+</button>
+                                <button id="lightning-minus" class="token-btn">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-item token-status token-status--moon">
+                        <div class="token-line">
+                            <span class="status-label">🌙 月</span>
+                            <span class="status-value"><span id="moon-tokens">0</span> 個</span>
+                            <div class="token-controls">
+                                <button id="moon-plus" class="token-btn">+</button>
+                                <button id="moon-minus" class="token-btn">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-item token-status token-status--star">
+                        <div class="token-line">
+                            <span class="status-label">⭐ 星</span>
+                            <span class="status-value"><span id="star-tokens">0</span> 個</span>
+                            <div class="token-controls">
+                                <button id="star-plus" class="token-btn">+</button>
+                                <button id="star-minus" class="token-btn">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-item status-item--score">
+                        <span class="status-label">得点</span>
+                        <div class="status-value">
+                            <span id="score-total">0</span>
+                            <span class="status-unit">点</span>
+                        </div>
+                        <div class="score-detail-text" id="score-detail-text">
+                            コンプリート：0, 黒マス：0 = 0 (+月ボーナス+星ボーナス)
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 操作ボタン -->
+            <section class="game-controls">
+                <div class="control-buttons">
+                    <button id="undo-btn" class="btn btn-secondary undo-btn" disabled>↖ Undo</button>
+                    <button id="reset-btn" class="btn btn-warning">🔄 オールリセット</button>
+                </div>
+            </section>
+
+            <!-- 履歴表示セクション -->
+            <section class="history-display">
+                <h2>📜 操作履歴</h2>
+                <div class="history-info">
+                    <span id="history-position">現在の位置: 0 / 0</span>
+                </div>
+                <div id="history-list" class="history-list">
+                    <p class="no-history">履歴がありません</p>
+                </div>
+            </section>
+
+            <!-- コンプリートカード表示 -->
+            <section class="completed-cards">
+                <h2>🏆 コンプリートカード</h2>
+                <div id="completed-cards-container" class="cards-container">
+                    <p class="no-cards">コンプリートカードはありません</p>
+                </div>
+            </section>
+
+            <!-- アプリ情報（バージョン・最終保存時刻・保存エラー警告） -->
+            <section class="server-info">
+                <small>バージョン: <span id="app-version">-</span> | 最終保存: <span id="last-save">-</span></small>
+                <div id="save-warning" class="save-warning" hidden></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/version.js"></script>
+    <script src="js/cards.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/pwa.js"></script>
+</body>
+</html>

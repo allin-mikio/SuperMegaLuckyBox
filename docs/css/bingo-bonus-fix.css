@@ -1,0 +1,278 @@
+/* ビンゴカードコンテナ */
+.bingo-card {
+    background: linear-gradient(135deg, #F8B54A 0%, #F2961C 100%) !important;
+    border: 3px solid #8B4513 !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+    margin: 0 auto 20px !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+    max-width: 350px !important;
+    box-sizing: border-box !important;
+}
+
+.grid-with-col-bonus {
+    display: grid !important;
+    grid-template-rows: 1fr auto !important;
+    gap: 6px !important;
+}
+
+.grid-with-col-bonus .col-bonus-strip {
+    display: grid !important;
+    grid-template-columns: repeat(var(--grid-cols, 3), 1fr) !important;
+    gap: 4px !important;
+    justify-items: center !important;
+}
+
+.row-bonus-column {
+    display: grid !important;
+    grid-template-rows: repeat(var(--grid-rows, 3), 1fr) !important;
+    gap: 4px !important;
+    align-content: stretch !important;
+    justify-items: center !important;
+}
+
+.main-grid-wrapper {
+    display: flex !important;
+}
+
+.col-bonus-strip.empty {
+    display: none !important;
+}
+
+.row-bonus-column.empty {
+    display: none !important;
+}
+
+/* カードヘッダー */
+.card-header {
+    text-align: center !important;
+    font-size: 1.3rem !important;
+    font-weight: bold !important;
+    color: #8B4513 !important;
+    margin-bottom: 12px !important;
+    padding: 6px 10px !important;
+    border: 3px solid #8B4513 !important;
+    border-radius: 10px !important;
+}
+
+/* ビンゴグリッド */
+.bingo-grid {
+    display: grid !important;
+    grid-template-columns: repeat(var(--grid-cols, 3), 1fr) !important;
+    gap: 4px !important;
+    background: #4B0082 !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    max-width: 300px !important;
+    margin: 0 auto !important;
+}
+
+/* ビンゴセル */
+.bingo-cell {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #FFFFFF !important;
+    border: 2px solid #4B0082 !important;
+    border-radius: 4px !important;
+    color: #4B0082 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    aspect-ratio: 1 !important;
+}
+
+/* セル内のコンテンツ */
+.cell-content {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* セル内の数字 */
+.cell-number {
+    font-size: 1.5rem !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    color: inherit !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* マークされたセル */
+.bingo-cell.marked {
+    background: linear-gradient(135deg, #2C2C2C 0%, #1A1A1A 100%) !important;
+    color: #E0E0E0 !important;
+    border-color: #404040 !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* チェックマークを非表示 */
+.bingo-cell.marked .cell-checkmark {
+    display: none !important;
+}
+
+/* 行ボーナス */
+.bingo-row {
+    display: flex !important;
+    align-items: stretch !important;
+    margin-bottom: 2px !important;
+    width: 100% !important;
+}
+
+.col-bonus-row {
+    background: transparent !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.col-bonus-grid {
+    display: flex !important;
+    align-items: center !important;
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 6px !important;
+}
+
+/* コーナースペーサー */
+.corner-spacer {
+    width: 43px !important;
+    height: 35px !important;
+    background: transparent !important;
+}
+.col-bonus-row .bonus-spacer {
+    background: transparent !important;
+    width: 40px !important;
+    height: 40px !important;
+}
+
+/* ボーナスセル */
+.bonus-cell {
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    background: #FFD700 !important;
+    border: 2px solid #B8860B !important;
+    border-radius: 5px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.2rem !important;
+    font-weight: bold !important;
+    color: #8B4513 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2) !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.bonus-cell .bonus-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1rem !important;
+    line-height: 1 !important;
+    margin: 0 2px !important;
+    white-space: nowrap !important;
+}
+
+.bonus-cell .bonus-icon:last-child {
+    margin-right: 0 !important;
+}
+
+.bonus-cell .bonus-icon--lightning {
+    color: #000 !important;
+    text-shadow: none !important;
+}
+
+.bonus-cell .bonus-icon--number {
+    font-size: 0.95rem !important;
+}
+
+.bonus-cell .bonus-icon--black {
+    color: #000 !important;
+}
+
+/* 行ボーナス */
+.row-bonus {
+    margin: 2px !important;
+    background: #FFFFFF !important;
+    border: 2px solid #B8860B !important;
+}
+
+/* 列ボーナス */
+.col-bonus {
+    margin: 2px !important;
+    background: #FFFFFF !important;
+    border: 2px solid #B8860B !important;
+    color: #8B4513 !important;
+}
+
+/* ボーナス利用可能時 */
+.bonus-cell.available,
+.col-bonus.available {
+    background: linear-gradient(135deg, #D7F2D2 0%, #A5D66A 100%) !important;
+    border-color: #5B9E31 !important;
+    box-shadow: 0 0 10px rgba(91, 158, 49, 0.55) !important;
+    z-index: 1 !important;
+}
+
+/* ボーナス使用済み */
+.bonus-cell.used,
+.col-bonus.used {
+    background: #707070 !important;
+    border-color: #4a4a4a !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+/* 完了時のスタイル */
+.bonus-cell.completed {
+    background: #FFA500 !important;
+    border-color: #8B4513 !important;
+    box-shadow: 0 0 15px rgba(255, 165, 0, 0.7) !important;
+}
+
+/* ボーナスアイコン */
+.bonus-cell i {
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 400px) {
+    .bingo-card {
+        padding: 10px !important;
+    }
+    
+    .bingo-cell span {
+        font-size: 1.2rem !important;
+    }
+    
+    .bonus-cell {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1.1rem !important;
+    }
+    
+    .bonus-cell i {
+        font-size: 1.2rem !important;
+    }
+}
