@@ -127,10 +127,10 @@ class LuckyBoxUI {
         }
 
         // Undo/Resetボタン
-        const undoBtn = document.getElementById('undo-btn');
         const resetBtn = document.getElementById('reset-btn');
         
-        if (undoBtn) {
+        // Undoボタンは複数配置（ビンゴカード見出し横 + 操作ボタン欄）
+        document.querySelectorAll('.undo-btn').forEach(undoBtn => {
             // 既存のイベントリスナーを削除
             const newUndoBtn = undoBtn.cloneNode(true);
             undoBtn.parentNode.replaceChild(newUndoBtn, undoBtn);
@@ -139,7 +139,7 @@ class LuckyBoxUI {
                 console.log('Undoボタンクリック');
                 this.undo();
             });
-        }
+        });
         
         if (resetBtn) {
             // 既存のイベントリスナーを削除
@@ -295,10 +295,10 @@ class LuckyBoxUI {
         const lightningMinusBtn = document.getElementById('lightning-minus');
         const moonMinusBtn = document.getElementById('moon-minus');
         const starMinusBtn = document.getElementById('star-minus');
-        const undoBtn = document.getElementById('undo-btn');
+        const undoBtns = document.querySelectorAll('.undo-btn');
         
-        // Undoボタンの状態を更新
-        if (undoBtn) {
+        // Undoボタンの状態を更新（全Undoボタン共通）
+        undoBtns.forEach(undoBtn => {
             undoBtn.disabled = !canUndo;
             if (canUndo) {
                 undoBtn.style.background = 'white';
@@ -313,7 +313,7 @@ class LuckyBoxUI {
                 undoBtn.style.opacity = '0.5';
                 undoBtn.style.cursor = 'not-allowed';
             }
-        }
+        });
         
         if (lightningMinusBtn) {
             lightningMinusBtn.disabled = lightningTokens <= 0;

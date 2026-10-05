@@ -573,6 +573,31 @@ body #lightning-minus2.lightning-effect-btn.active {
     min-height: 200px;
 }
 
+/* セクション見出し + 右側ボタン（ビンゴカード見出しのUndo用） */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #E0E0E0;
+    padding-bottom: 5px;
+}
+
+.section-header h2 {
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.btn-inline {
+    padding: 6px 16px;
+    font-size: 1rem;
+    border-width: 2px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
 #cards-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

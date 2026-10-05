@@ -36,7 +36,10 @@
 
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">
-                <h2>🗂️ ビンゴカード</h2>
+                <div class="section-header">
+                    <h2>🗂️ ビンゴカード</h2>
+                    <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                </div>
                 <div id="cards-container">
                     <p class="no-cards">カードが追加されていません</p>
                 </div>
@@ -92,7 +95,7 @@
             <!-- 操作ボタン -->
             <section class="game-controls">
                 <div class="control-buttons">
-                    <button id="undo-btn" class="btn btn-secondary" disabled>↖ Undo</button>
+                    <button id="undo-btn" class="btn btn-secondary undo-btn" disabled>↖ Undo</button>
                     <button id="reset-btn" class="btn btn-warning">🔄 オールリセット</button>
                 </div>
             </section>
