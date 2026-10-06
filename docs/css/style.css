@@ -606,10 +606,44 @@ body #lightning-minus2.lightning-effect-btn.active {
     white-space: nowrap;
 }
 
+/*
+ * カードの並べ方（タブレット想定）
+ * 横幅を12分割して、盤面サイズごとに「何分割ぶん使うか」を決める。
+ *   3x3 → 4分割ぶん（横に3枚） / 4x4 → 6分割ぶん（横に2枚） / 5x5 → 12分割ぶん（横に1枚）
+ * 並び替えたいときは、下の span の数字だけを変える。
+ * （各カードの幅そのものは bingo-bonus-fix.css の max-width で決まる）
+ */
 #cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 20px;
+    row-gap: 0; /* 縦の間隔は、各カードの margin-bottom(20px) が担う */
+    align-items: start;
+}
+
+#cards-container > .no-cards {
+    grid-column: 1 / -1;
+}
+
+/* 割り当てられた幅いっぱいに広げる（上限は bingo-bonus-fix.css の max-width）。隣のカードに重ならないようにする */
+#cards-container > .bingo-card {
+    min-width: 0;
+    width: 100%;
+}
+
+#cards-container > .bingo-card.size-3 { grid-column: span 4; }
+#cards-container > .bingo-card.size-4 { grid-column: span 6; }
+#cards-container > .bingo-card.size-5 { grid-column: span 12; }
+
+/* 幅が狭い画面（スマホなど）: 3x3 は2枚並び、4x4 以上は1枚 */
+@media (max-width: 700px) {
+    #cards-container > .bingo-card.size-3 { grid-column: span 6; }
+    #cards-container > .bingo-card.size-4 { grid-column: span 12; }
+}
+
+/* さらに狭い画面: すべて1枚 */
+@media (max-width: 480px) {
+    #cards-container > .bingo-card.size-3 { grid-column: span 12; }
 }
 
 .no-cards {

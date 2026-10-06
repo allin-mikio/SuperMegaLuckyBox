@@ -607,6 +607,22 @@ class LuckyBoxUI {
         console.log('表示更新完了');
     }
 
+    // カードIDごとの表示順位（ラウンド順 → cards.js の cardsByRound に書かれた順）
+    getCardDisplayRankMap() {
+        if (this._cardRankMap) return this._cardRankMap;
+        const map = new Map();
+        const byRound = (window.LUCKYBOX_CARDS && window.LUCKYBOX_CARDS.cardsByRound) || {};
+        const roundOrder = ['tutorial', 'round1', 'round2', 'round3', 'round4'];
+        let rank = 0;
+        roundOrder.forEach((roundName) => {
+            (byRound[roundName] || []).forEach((cardId) => {
+                if (!map.has(cardId)) map.set(cardId, rank++);
+            });
+        });
+        this._cardRankMap = map;
+        return map;
+    }
+
     updateCardsDisplay() {
         const activeContainer = document.getElementById('cards-container');
         const completedContainer = document.getElementById('completed-cards-container');
@@ -625,7 +641,19 @@ class LuckyBoxUI {
                     console.log(`カード${index}:`, card);
                 });
 
-                activeContainer.innerHTML = this.gameState.cards.map((card, index) =>
+                // 表示順: ラウンド順 → 同一ラウンド内はカード選択リストの順。
+                // 内部の登録順（Undo・保存データ・マスのタップ判定に使う番号）は変えず、
+                // 表示の並びだけを変える（index は元の番号のまま渡す）。
+                const rank = this.getCardDisplayRankMap();
+                const ordered = this.gameState.cards
+                    .map((card, index) => ({
+                        card,
+                        index,
+                        rank: rank.has(card.card_id) ? rank.get(card.card_id) : Number.MAX_SAFE_INTEGER
+                    }))
+                    .sort((a, b) => (a.rank - b.rank) || (a.index - b.index));
+
+                activeContainer.innerHTML = ordered.map(({ card, index }) =>
                     this.createCardElement(card, index)
                 ).join('');
 
@@ -875,7 +903,7 @@ class LuckyBoxUI {
         ` : '';
 
         return `
-            <div class="bingo-card${disableInteractions ? ' completed-card' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
+            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">カード ${card.card_id}</div>
                 <div class="card-content">
                     <div class="bingo-board">
