@@ -1,7 +1,7 @@
 {
-  "name": "はろなぞ4 ビンゴカードサポート",
-  "short_name": "ビンゴサポート",
-  "description": "スーパーメガラッキーボックス ビンゴカードサポート",
+  "name": "はろなぞ4 Bingo Support",
+  "short_name": "Bingo Support",
+  "description": "Super Mega Lucky Box [Bingo Support]",
   "lang": "ja",
   "start_url": "./index.html",
   "scope": "./",
