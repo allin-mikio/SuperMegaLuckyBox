@@ -14,8 +14,8 @@
 (function () {
   'use strict';
 
-  // 暗証番号を変更する場合は、ここを書き換える（4桁の数字）
-  const STAFF_PIN = '1415';
+  // 暗証番号を変更する場合は、ここを書き換える（数字。桁数は自由。入力欄の桁数もこの長さに合わせる）
+  const STAFF_PIN = '141';
   // タイトルの長押し時間（ミリ秒）
   const LONG_PRESS_MS = 1200;
   // スタッフモードで無操作が続いたときに、自動でユーザーモードへ戻るまでの時間（ミリ秒）
@@ -31,6 +31,9 @@
   const pinInput = document.getElementById('staff-pin-input');
   const pinError = document.getElementById('staff-pin-error');
   const pinCancel = document.getElementById('staff-pin-cancel');
+
+  // 入力できる桁数は、暗証番号の長さに合わせる（HTML側には書かない）
+  pinInput.maxLength = STAFF_PIN.length;
 
   let isStaff = false;
   let deadline = 0;
