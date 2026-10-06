@@ -29,3 +29,6 @@ desktop.ini
 *.log
 *.tmp
 *.bak
+
+# テストの基準データ（tests/gen_golden.py で生成。約700KBあり再生成できるため管理しない）
+tests/golden.js

@@ -1,9 +1,19 @@
-from flask import Flask, render_template, jsonify, request, session
+"""【参考実装】旧ゲームサーバー版（Flask）。
+
+本番のアプリはスタンドアローン版（docs/ 以下。ブラウザ内で完結し、サーバー不要）。
+このファイルは次の目的で残してある:
+  - docs/js/engine.js（JS版エンジン）の挙動を検証する「正解」（tests/gen_golden.py が利用）
+  - docs/js/cards.js のカード定義の生成元（tools/export_cards.py が利用）
+ゲームのルールを変更した場合は、こことJS版の両方を直してテストで一致を確認すること。
+"""
+from flask import Flask, send_from_directory, jsonify, request, session
+import os
 import random
 import uuid
 import csv
-import os
 from datetime import datetime, timedelta
+
+DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
 
 app = Flask(__name__)
 app.secret_key = 'super-mega-lucky-box-2024'  # セッション用秘密鍵
@@ -1282,8 +1292,14 @@ def get_user_game():
 
 @app.route('/')
 def index():
-    """メインページを表示"""
-    return render_template('index.html')
+    """メインページを表示（スタンドアローン版の画面 docs/index.html を返す）"""
+    return send_from_directory(DOCS_DIR, 'index.html')
+
+
+@app.route('/<path:filename>')
+def docs_files(filename):
+    """スタンドアローン版の静的ファイル（docs/ 以下）を返す"""
+    return send_from_directory(DOCS_DIR, filename)
 
 @app.route('/api/game_state')
 def get_game_state():
