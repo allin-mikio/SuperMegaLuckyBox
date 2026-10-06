@@ -31,7 +31,7 @@ SuperMegaLuckyBox/
 │       └── pwa.js             #   Service Worker 登録・更新通知
 ├── start_dev.bat              # 開発用の簡易サーバーを起動（ダブルクリック）
 ├── tests/                     # JS版エンジンの自動テスト
-├── tools/                     # カード定義・アイコンの生成スクリプト
+├── tools/                     # カード定義・アイコンの生成スクリプトと、アイコン元画像（logo.png）
 ├── app.py                     # 旧サーバー版（Flask）。テストの「正解」として残している参考実装
 └── requirements.txt           # tests / tools / app.py 用の依存（Flask）
 ```
@@ -95,6 +95,7 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_tests.ps1
 - **カードの内容（盤面・ボーナス・ラウンド構成）**: `docs/js/cards.js` を直接編集します。
 - **ゲームのルール（ロジック）**: `docs/js/engine.js` を変更します。ルール変更の際は、基準である `app.py` も同じように直し、`run_tests.ps1` で一致を確認してください。
 - **画面**: `docs/` 以下だけを編集します。
+- **アプリのアイコン（ロゴ）**: `tools/logo.png` を差し替え（正方形・背景は透明にしない・512px 以上）、`.venv\Scripts\python.exe tools\make_icons.py` を実行します（Pillow が必要: `.venv\Scripts\python.exe -m pip install pillow`）。`docs/icons/` の4ファイルが作り直されます。**iPad では、ホーム画面のアイコンを一度削除して「ホーム画面に追加」をやり直さないと、新しいアイコンになりません**（保存データも消えます）。Android は数日以内に自動で変わることが多いです。
 
 どの変更でも、**公開前に `docs/js/version.js` の `APP_VERSION` を更新**してください（更新しないと、端末に反映されません）。
 
