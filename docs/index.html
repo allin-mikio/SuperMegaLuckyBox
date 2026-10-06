@@ -17,12 +17,33 @@
         <button id="update-reload-btn" class="btn btn-primary btn-inline" type="button">更新する</button>
     </div>
 
+    <!-- スタッフモード中に表示される帯（手動でユーザーモードへ戻すボタン付き） -->
+    <div id="staff-banner" class="staff-banner" hidden>
+        <span class="staff-banner-title">🔧 スタッフモード</span>
+        <span id="staff-countdown" class="staff-countdown"></span>
+        <button id="staff-exit-btn" class="btn btn-primary btn-inline" type="button">ユーザーモードに戻る</button>
+    </div>
+
+    <!-- スタッフモードへ入るための暗証番号入力 -->
+    <div id="staff-pin-overlay" class="staff-pin-overlay" hidden>
+        <form id="staff-pin-form" class="staff-pin-dialog" autocomplete="off">
+            <h3>スタッフモード</h3>
+            <p>暗証番号を入力してください</p>
+            <input id="staff-pin-input" class="staff-pin-input" type="password" inputmode="numeric"
+                   pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" aria-label="暗証番号">
+            <p id="staff-pin-error" class="staff-pin-error" hidden>暗証番号が違います</p>
+            <div class="staff-pin-buttons">
+                <button id="staff-pin-cancel" class="btn btn-secondary btn-inline" type="button">キャンセル</button>
+            </div>
+        </form>
+    </div>
+
     <div class="container">
-        <h1>🎃 はろなぞ4<br><small>ビンゴカードサポート</small></h1>
+        <h1 id="app-title">🎃 はろなぞ4<br><small>ビンゴカードサポート</small></h1>
 
         <main>
-            <!-- ビンゴカード管理 -->
-            <section class="card-management">
+            <!-- ビンゴカード管理（スタッフ専用） -->
+            <section class="card-management staff-only">
                 <h2>⚙️ ビンゴカード管理</h2>
 
                 <div class="card-management-controls">
@@ -46,8 +67,11 @@
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">
                 <div class="section-header">
-                    <h2>🗂️ ビンゴカード</h2>
-                    <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                    <h2>🗂️ Bingo Cards</h2>
+                    <div class="header-actions">
+                        <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                        <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
+                    </div>
                 </div>
                 <div id="cards-container">
                     <p class="no-cards">カードが追加されていません</p>
@@ -56,13 +80,13 @@
 
             <!-- ゲーム状態表示 -->
             <section class="game-status">
-                <h2>📊 ゲーム状態</h2>
+                <h2>📊 Game Stats</h2>
                 <div class="status-grid">
                     <div class="status-item token-status token-status--lightning">
                         <div class="token-line">
                             <span class="status-label">⚡ 雷</span>
                             <span class="status-value"><span id="lightning-tokens">4</span> 個</span>
-                            <div class="token-controls">
+                            <div class="token-controls staff-only">
                                 <button id="lightning-plus" class="token-btn">+</button>
                                 <button id="lightning-minus" class="token-btn">-</button>
                             </div>
@@ -72,7 +96,7 @@
                         <div class="token-line">
                             <span class="status-label">🌙 月</span>
                             <span class="status-value"><span id="moon-tokens">0</span> 個</span>
-                            <div class="token-controls">
+                            <div class="token-controls staff-only">
                                 <button id="moon-plus" class="token-btn">+</button>
                                 <button id="moon-minus" class="token-btn">-</button>
                             </div>
@@ -82,7 +106,7 @@
                         <div class="token-line">
                             <span class="status-label">⭐ 星</span>
                             <span class="status-value"><span id="star-tokens">0</span> 個</span>
-                            <div class="token-controls">
+                            <div class="token-controls staff-only">
                                 <button id="star-plus" class="token-btn">+</button>
                                 <button id="star-minus" class="token-btn">-</button>
                             </div>
@@ -101,16 +125,8 @@
                 </div>
             </section>
 
-            <!-- 操作ボタン -->
-            <section class="game-controls">
-                <div class="control-buttons">
-                    <button id="undo-btn" class="btn btn-secondary undo-btn" disabled>↖ Undo</button>
-                    <button id="reset-btn" class="btn btn-warning">🔄 オールリセット</button>
-                </div>
-            </section>
-
             <!-- 履歴表示セクション -->
-            <section class="history-display">
+            <section class="history-display staff-only">
                 <h2>📜 操作履歴</h2>
                 <div class="history-info">
                     <span id="history-position">現在の位置: 0 / 0</span>
@@ -120,8 +136,8 @@
                 </div>
             </section>
 
-            <!-- コンプリートカード表示 -->
-            <section class="completed-cards">
+            <!-- コンプリートカード表示（現在は全モードで非表示。復活させるときは feature-off クラスを外す） -->
+            <section class="completed-cards feature-off">
                 <h2>🏆 コンプリートカード</h2>
                 <div id="completed-cards-container" class="cards-container">
                     <p class="no-cards">コンプリートカードはありません</p>
@@ -140,6 +156,7 @@
     <script src="js/cards.js"></script>
     <script src="js/engine.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/staff.js"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

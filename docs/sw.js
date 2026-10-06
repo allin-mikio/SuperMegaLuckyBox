@@ -20,6 +20,7 @@ const PRECACHE_URLS = [
   'js/cards.js',
   'js/engine.js',
   'js/game.js',
+  'js/staff.js',
   'js/pwa.js',
   'icons/icon-192.png',
   'icons/icon-512.png',

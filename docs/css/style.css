@@ -578,6 +578,7 @@ body #lightning-minus2.lightning-effect-btn.active {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 15px;
     border-bottom: 2px solid #E0E0E0;
@@ -588,6 +589,13 @@ body #lightning-minus2.lightning-effect-btn.active {
     margin: 0;
     border-bottom: none;
     padding-bottom: 0;
+}
+
+/* 見出し右のボタン群（Undo、スタッフモード時はオールリセットも） */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .btn-inline {
@@ -1297,4 +1305,116 @@ body #lightning-minus2.lightning-effect-btn.active {
 
 .save-warning[hidden] {
     display: none;
+}
+/* ---- スタッフモード / ユーザーモード ---- */
+
+/* スタッフ専用の部品は、ユーザーモードでは非表示 */
+body:not(.staff-mode) .staff-only {
+    display: none !important;
+}
+
+/* 機能ごと一時的に隠す（全モードで非表示）。復活させるときは HTML から feature-off を外す */
+.feature-off {
+    display: none !important;
+}
+
+/* スタッフモード中は、スタッフ専用の部品を点線で囲んで分かりやすくする */
+body.staff-mode .staff-only {
+    outline: 2px dashed #4B0082;
+    outline-offset: 3px;
+}
+
+/* タイトルの長押し（スタッフモードへの入口）で、文字選択やメニューを出さない */
+#app-title {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+/* スタッフモード中の帯（画面上部に追従） */
+.staff-banner {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 14px;
+    padding: 8px 12px;
+    background: #4B0082;
+    color: #FFFFFF;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.staff-banner[hidden] {
+    display: none;
+}
+
+.staff-countdown {
+    font-size: 0.85rem;
+    font-weight: normal;
+    opacity: 0.9;
+}
+
+/* 暗証番号ダイアログ */
+.staff-pin-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.staff-pin-overlay[hidden] {
+    display: none;
+}
+
+.staff-pin-dialog {
+    width: min(320px, 90vw);
+    padding: 20px;
+    border: 3px solid #4B0082;
+    border-radius: 14px;
+    background: #FFFFFF;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.staff-pin-dialog h3 {
+    margin: 0 0 6px;
+    color: #4B0082;
+}
+
+.staff-pin-dialog p {
+    margin: 4px 0 10px;
+}
+
+.staff-pin-input {
+    width: 8ch;
+    padding: 8px 10px;
+    border: 2px solid #4B0082;
+    border-radius: 8px;
+    font-size: 1.6rem;
+    letter-spacing: 0.4em;
+    text-align: center;
+}
+
+.staff-pin-error {
+    color: #B00020;
+    font-weight: bold;
+}
+
+.staff-pin-error[hidden] {
+    display: none;
+}
+
+.staff-pin-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
 }
