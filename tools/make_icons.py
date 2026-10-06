@@ -14,6 +14,7 @@
   - icon-maskable-512.png       : マスカブル（Android が丸/角丸に切り抜いても欠けないよう、
                                   ロゴを 80% に縮め、周囲をロゴ自身のぼかしで埋める）
   - apple-touch-icon.png        : iPad / iPhone のホーム画面用（180x180。角丸は iOS が付ける）
+  - docs/images/title-logo.png  : 画面タイトル（「はろなぞ4」）の左に表示する画像（192x192）
 """
 import os
 import sys
@@ -26,6 +27,7 @@ except ImportError:
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, 'tools', 'logo.png')
 OUT_DIR = os.path.join(ROOT, 'docs', 'icons')
+IMAGES_DIR = os.path.join(ROOT, 'docs', 'images')
 
 # マスカブル版で、ロゴを縮める割合（Android の安全領域は中央の約80%）
 MASKABLE_SCALE = 0.8
@@ -76,6 +78,11 @@ def main():
     save(resized(src, 512), 'icon-512.png')
     save(maskable(src, 512), 'icon-maskable-512.png')
     save(resized(src, 180), 'apple-touch-icon.png')
+    # 画面タイトルの横に表示する画像（docs/images/title-logo.png）。軽く保つため 192px に縮める
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    path = os.path.join(IMAGES_DIR, 'title-logo.png')
+    resized(src, 192).save(path, 'PNG', optimize=True)
+    print(f'wrote {path} ({os.path.getsize(path) // 1024} KB)')
 
 
 if __name__ == '__main__':
