@@ -1360,9 +1360,34 @@ body.staff-mode::before {
                 radial-gradient(circle at 80% 80%, rgba(120, 0, 0, 0.25) 0%, transparent 50%);
 }
 
+/* 白い本体の地色も赤にする（各セクションは読みやすいように薄いピンクのまま） */
 body.staff-mode .container {
-    border-color: #A00000;
+    background: #E53935;
+    border-color: #7A0000;
     border-width: 6px;
+}
+
+body.staff-mode section:not(.card-management) {
+    background: linear-gradient(135deg, #FFF1F1 0%, #FFD9D9 100%);
+}
+
+/* 赤い地色の上でも読めるように、タイトルとフッターは白文字にする */
+body.staff-mode h1 {
+    color: #FFFFFF;
+    text-shadow:
+        3px 3px 0px #A00000,
+        6px 6px 0px #7A0000,
+        9px 9px 15px rgba(0, 0, 0, 0.4);
+}
+
+body.staff-mode h1 small {
+    color: #FFECEC;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+body.staff-mode .server-info {
+    color: #FFFFFF;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 /* 機能ごと一時的に隠す（全モードで非表示）。復活させるときは HTML から feature-off を外す */

@@ -17,7 +17,7 @@
   // 暗証番号を変更する場合は、ここを書き換える（4桁の数字）
   const STAFF_PIN = '1415';
   // タイトルの長押し時間（ミリ秒）
-  const LONG_PRESS_MS = 2000;
+  const LONG_PRESS_MS = 1500;
   // スタッフモードで無操作が続いたときに、自動でユーザーモードへ戻るまでの時間（ミリ秒）
   const config = { idleMs: 1 * 60 * 1000 };
 
@@ -88,15 +88,46 @@
   exitBtn.addEventListener('click', () => setStaffMode(false));
 
   /* ---------------- 暗証番号ダイアログ ---------------- */
+  // 長押しが成立した直後は、まだ指が画面に触れている。
+  // タブレットのブラウザは「ユーザーの操作（指を離す・タップする）」の中で focus() しないと
+  // ソフトウェアキーボードを出さないので、指を離した瞬間にもう一度フォーカスする。
+  let focusOnNextRelease = false;
+
+  function focusPinInput() {
+    // 一度外してからフォーカスし直す（すでにフォーカス済みだとキーボードが出ない端末があるため）
+    pinInput.blur();
+    pinInput.focus();
+  }
+
   function openPinDialog() {
     if (isStaff) return;
     pinInput.value = '';
     pinError.hidden = true;
     overlay.hidden = false;
-    pinInput.focus();
+    pinInput.focus(); // PCでは、これだけで入力できる状態になる
+    focusOnNextRelease = true;
   }
 
+  // 指（マウス）を離したとき、ダイアログが開いていればキーボードを出す
+  document.addEventListener(
+    'pointerup',
+    () => {
+      if (focusOnNextRelease && !overlay.hidden) {
+        focusOnNextRelease = false;
+        focusPinInput();
+      }
+    },
+    true
+  );
+
+  // キーボードが閉じてしまったときは、ダイアログの空き部分をタップすれば出せる
+  overlay.addEventListener('click', (event) => {
+    if (event.target === pinCancel) return;
+    pinInput.focus();
+  });
+
   function closePinDialog() {
+    focusOnNextRelease = false;
     overlay.hidden = true;
     pinInput.value = '';
     pinError.hidden = true;
