@@ -64,21 +64,7 @@
             </section>
 
 
-            <!-- ビンゴカード表示セクション -->
-            <section class="bingo-cards">
-                <div class="section-header">
-                    <h2>🗂️ Bingo Cards</h2>
-                    <div class="header-actions">
-                        <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
-                        <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
-                    </div>
-                </div>
-                <div id="cards-container">
-                    <p class="no-cards">カードが追加されていません</p>
-                </div>
-            </section>
-
-            <!-- ゲーム状態表示 -->
+            <!-- ゲーム状態表示（ビンゴカードの上） -->
             <section class="game-status">
                 <h2>📊 Game Stats</h2>
                 <div class="status-grid">
@@ -122,6 +108,20 @@
                             コンプリート：0, 黒マス：0 = 0 (+月ボーナス+星ボーナス)
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- ビンゴカード表示セクション -->
+            <section class="bingo-cards">
+                <div class="section-header">
+                    <h2>🗂️ Bingo Cards</h2>
+                    <div class="header-actions">
+                        <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                        <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
+                    </div>
+                </div>
+                <div id="cards-container">
+                    <p class="no-cards">カードが追加されていません</p>
                 </div>
             </section>
 
