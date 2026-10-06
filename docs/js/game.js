@@ -887,7 +887,7 @@ class LuckyBoxUI {
         ` : '';
 
         const mainGridHtml = `
-            <div class="bingo-grid main-grid" style="grid-template-columns: repeat(${colCount}, 1fr); grid-template-rows: repeat(${rowCount}, 1fr);">
+            <div class="bingo-grid main-grid" style="--grid-cols: ${colCount}; --grid-rows: ${rowCount};">
                 ${mainGridCells.join('')}
             </div>
         `;
@@ -906,7 +906,7 @@ class LuckyBoxUI {
             <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">カード ${card.card_id}</div>
                 <div class="card-content">
-                    <div class="bingo-board">
+                    <div class="bingo-board" style="--cols: ${colCount};">
                         ${mainGridHtml}
                         ${rowBonusColumn}
                         ${colBonusStripHtml}

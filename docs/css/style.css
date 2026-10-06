@@ -651,6 +651,15 @@ body #lightning-minus2.lightning-effect-btn.active {
 #cards-container > .bingo-card.size-4 { grid-column: span 6; }
 #cards-container > .bingo-card.size-5 { grid-column: span 12; }
 
+/*
+ * カードの幅の上限（--card-max）。1マスの大きさが、どの盤面サイズでもほぼ同じ（約74px）になる値。
+ *   上限 = (列数 + 1) × 1マス + (列数 - 1) × 4px + 10px + カードの余白と枠（36px）
+ * 1マスをもっと大きくしたいときは、ここの数字を大きくする。
+ */
+#cards-container > .bingo-card.size-3 { --card-max: 350px; }
+#cards-container > .bingo-card.size-4 { --card-max: 430px; }
+#cards-container > .bingo-card.size-5 { --card-max: 510px; }
+
 /* 幅が狭い画面（スマホなど）: 3x3 は2枚並び、4x4 以上は1枚 */
 @media (max-width: 700px) {
     #cards-container > .bingo-card.size-3 { grid-column: span 6; }
@@ -982,18 +991,37 @@ body #lightning-minus2.lightning-effect-btn.active {
     gap: 5px;
 }
 
+/*
+ * カードの寸法の決め方
+ *   盤面のマス・行ボーナス・列ボーナスは、すべて同じ大きさ（--cell）の正方形。
+ *   カード全体の幅から --cell を計算するので、カードの幅が変わっても、はみ出さずに縮む／広がる。
+ *     カード内側の幅 = (列数 + 1) × --cell + (列数 - 1) × 4px（マスの間隔）+ 10px（盤面の余白 8px + 盤面と行ボーナスの隙間 2px）
+ *   → --cell = (カード内側の幅 - (列数 - 1) × 4px - 10px) / (列数 + 1)
+ *   --cols（列数）は、game.js が .bingo-board に埋め込む。
+ */
 .bingo-card .bingo-board {
+    --cell: 56px; /* container query 非対応の古いブラウザ用の固定値 */
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto var(--cell);
+    justify-content: start;
     gap: 2px;
-    align-items: stretch;
+    align-items: start;
+}
+
+@supports (width: 1cqw) {
+    .bingo-card .card-content {
+        container-type: inline-size;
+    }
+
+    .bingo-card .bingo-board {
+        --cell: calc((100cqw - (var(--cols, 3) - 1) * 4px - 10px) / (var(--cols, 3) + 1));
+        justify-content: center;
+    }
 }
 
 .bingo-card .main-grid {
     display: grid;
     gap: 4px;
-    width: 100%;
-    aspect-ratio: 1 / 1;
 }
 
 .bingo-card .main-grid .bingo-cell {
@@ -1010,7 +1038,8 @@ body #lightning-minus2.lightning-effect-btn.active {
 .bingo-card .row-bonus-column {
     display: grid;
     gap: 4px;
-    align-content: stretch;
+    padding-top: 4px; /* 盤面の上の余白（4px）に合わせて、各行の高さをそろえる */
+    align-content: start;
 }
 
 .bingo-card .row-bonus-column .row-bonus {
@@ -1021,11 +1050,11 @@ body #lightning-minus2.lightning-effect-btn.active {
 
 .bingo-card .col-bonus-strip {
     margin-top: 2px;
+    padding-left: 4px; /* 盤面の左の余白（4px）に合わせて、各列の位置をそろえる */
     display: grid;
     gap: 4px;
-    grid-template-columns: repeat(var(--grid-cols, 3), minmax(0, 1fr));
-    width: 100%;
-    justify-items: center;
+    grid-template-columns: repeat(var(--grid-cols, 3), var(--cell));
+    justify-content: start;
 }
 
 .bingo-card .col-bonus-strip .col-bonus {
