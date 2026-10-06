@@ -633,6 +633,15 @@ class LuckyBoxUI {
         if (activeContainer) {
             console.log('updateCardsDisplay: gameState.cards =', this.gameState.cards);
 
+            // iPad（Safari）では、カードを描き直した瞬間にページが短くなり、
+            // 画面が勝手に上へスクロールすることがある。これを防ぐため、
+            // 描き直しの間だけカード欄の高さを固定し、スクロール位置も元に戻す。
+            const keepScrollY = window.scrollY;
+            const keepHeight = activeContainer.offsetHeight;
+            if (keepHeight > 0) {
+                activeContainer.style.minHeight = `${keepHeight}px`;
+            }
+
             if (!this.gameState.cards || this.gameState.cards.length === 0) {
                 activeContainer.innerHTML = '<p class="no-cards">カードが追加されていません</p>';
             } else {
@@ -659,6 +668,17 @@ class LuckyBoxUI {
 
                 console.log('セルクリックイベント設定完了（onclick属性使用）');
             }
+
+            // スクロール位置を元に戻し、次の描画の後で高さの固定を外す
+            if (window.scrollY !== keepScrollY) {
+                window.scrollTo(0, keepScrollY);
+            }
+            setTimeout(() => {
+                activeContainer.style.minHeight = '';
+                if (window.scrollY !== keepScrollY && document.documentElement.scrollHeight - window.innerHeight >= keepScrollY) {
+                    window.scrollTo(0, keepScrollY);
+                }
+            }, 50);
         }
 
         // コンプリートカード描画

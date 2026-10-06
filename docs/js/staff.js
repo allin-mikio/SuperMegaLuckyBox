@@ -17,9 +17,9 @@
   // 暗証番号を変更する場合は、ここを書き換える（数字。桁数は自由。入力欄の桁数もこの長さに合わせる）
   const STAFF_PIN = '413';
   // タイトルの長押し時間（ミリ秒）
-  const LONG_PRESS_MS = 1200;
+  const LONG_PRESS_MS = 1000;
   // スタッフモードで無操作が続いたときに、自動でユーザーモードへ戻るまでの時間（ミリ秒）
-  const config = { idleMs: 1 * 60 * 1000 };
+  const config = { idleMs: 1 * 30 * 1000 };
 
   const body = document.body;
   const title = document.getElementById('app-title');
