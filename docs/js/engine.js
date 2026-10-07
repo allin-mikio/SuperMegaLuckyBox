@@ -938,11 +938,28 @@
       // 「使用済み」にしたボーナス欄のキー一覧を保存する（操作履歴は増やさない）。
       // 直後の操作（盤面のマスをタップなど）のスナップショットに含まれるので、
       // その操作を Undo すると、ボーナス欄の使用状態も一緒に戻る。
+      //
+      // ただし data.record が true のとき（月・星のボーナス欄）は、その切り替え自体を操作履歴に1件として残す。
+      // こうすると、Undo はその切り替えだけを取り消し、盤面のマスは元に戻らない。
       if (endpoint === 'set_bonus_states') {
         const used = data && Array.isArray(data.used) ? data.used : null;
         if (!used) return { success: false, error: 'used が配列ではありません' };
-        game.bonus_states = used.filter((k) => typeof k === 'string');
-        return { success: true };
+        const clean = used.filter((k) => typeof k === 'string');
+
+        if (data.record) {
+          // 直前のスナップショットより前に、履歴に残していない切り替え（数字ボーナス欄など）があれば、
+          // それも別の1件として先に残す（月・星の Undo で、それらまで巻き戻らないようにする）
+          const last = game.history[game.history.length - 1];
+          const lastStates = last && Array.isArray(last.bonus_states) ? last.bonus_states : [];
+          const sameSet = (a, b) => a.length === b.length && a.every((k) => b.includes(k));
+          if (!sameSet(game.bonus_states, lastStates)) game.saveState('ボーナス欄の使用状態を更新');
+
+          game.bonus_states = clean;
+          game.saveState(String(data.label || 'ボーナス欄の使用状態を変更'));
+        } else {
+          game.bonus_states = clean;
+        }
+        return { success: true, game_state: game.getGameState() };
       }
 
       if (endpoint === 'reset') {

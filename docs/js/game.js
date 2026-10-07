@@ -623,8 +623,23 @@ class LuckyBoxUI {
                 console.log('Reset成功');
                 // 前回の「使用済み」表示が次のゲームに残らないよう、手動トグル状態も消す
                 this.manualBonusStates.clear();
-                this.saveUiState();
                 this.gameState = result.game_state;
+
+                // リセット後は、最初の状態として「カード Tutorial」を追加し、ラウンドの選択を「チュートリアル」にする
+                this.currentRound = 'tutorial';
+                const roundSelect = document.getElementById('round-select');
+                if (roundSelect) {
+                    roundSelect.value = this.currentRound;
+                }
+                this.saveUiState();
+
+                const addResult = await this.apiCall('add_card', { card_id: 'Tutorial' });
+                if (addResult && addResult.success) {
+                    this.gameState = addResult.game_state;
+                } else {
+                    console.error('リセット後の Tutorial 追加に失敗:', addResult);
+                }
+
                 this.updateDisplay();
                 await this.loadRoundCards();
             } else {
@@ -1450,17 +1465,39 @@ class LuckyBoxUI {
             element.classList.add('available');
             this.manualBonusStates.delete(bonusKey);
         }
-        this.saveBonusStates();
+
+        if (element.classList.contains('bonus-pink')) {
+            // 月・星のボーナス欄: グレーにする／ピンクに戻す操作そのものを、操作履歴に1件として残す。
+            // Undo は、この切り替えだけを取り消す（盤面のマスは戻らない）。
+            const [cardId, type, index] = bonusKey.split(':');
+            const place = `${type === 'row' ? '行' : '列'}${Number(index) + 1}`;
+            const label = hasAvailable
+                ? `ボーナス使用済み: ${cardId} ${place}`
+                : `ボーナス未使用に戻す: ${cardId} ${place}`;
+            this.saveBonusStates({ record: true, label });
+        } else {
+            // 数字・？のボーナス欄: 履歴には残さず、次の盤面の操作（マスのタップ）と一緒に Undo で戻る
+            this.saveBonusStates();
+        }
     }
 
-    // 「使用済み」にしたボーナス欄の一覧は、ゲームエンジン側に保存する（Undo で一緒に戻すため）。
+    // 「使用済み」にしたボーナス欄の一覧は、ゲームエンジン側に保存する（Undo で戻すため）。
     // 画面側の manualBonusStates は、描画のたびにエンジンの値から作り直す。
-    saveBonusStates() {
+    saveBonusStates(options = {}) {
         const used = [];
         this.manualBonusStates.forEach((value, key) => {
             if (value === 'used') used.push(key);
         });
-        window.LuckyBoxEngine.getApi().call('set_bonus_states', { used });
+        const result = window.LuckyBoxEngine.getApi().call('set_bonus_states', {
+            used,
+            record: !!options.record,
+            label: options.label
+        });
+        // 履歴に残した場合は、Undo ボタンや操作履歴の表示も更新する
+        if (options.record && result && result.success && result.game_state) {
+            this.gameState = result.game_state;
+            this.updateDisplay();
+        }
     }
 
     loadBonusStates() {
