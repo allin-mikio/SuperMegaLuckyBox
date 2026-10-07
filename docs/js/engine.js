@@ -528,11 +528,31 @@
       if (isInitialState) return;
 
       this.history.push(state);
-      if (this.history.length > 50) this.history = this.history.slice(-50);
+      if (this.history.length > 50) {
+        // 先頭が「土台」（clearHistory が置いたもの）なら、それは残して、新しい49件を残す
+        this.history =
+          this.history[0] && this.history[0].baseline
+            ? [this.history[0]].concat(this.history.slice(-49))
+            : this.history.slice(-50);
+      }
+    }
+
+    // 操作履歴（Undo用）を消し、「現在の状態」を Undo の限界（土台）にする。
+    // これ以降の操作は Undo できるが、この状態より前には戻れない（盤面ごと消えることもない）。
+    clearHistory() {
+      const base = this._buildState('スタッフ操作を確定');
+      base.baseline = true;
+      this.history = [base];
+    }
+
+    // いま Undo できるか（履歴が空、または一番新しいものが「土台」なら不可）
+    canUndo() {
+      const last = this.history[this.history.length - 1];
+      return !!last && !last.baseline;
     }
 
     undo() {
-      if (!this.history.length) return false;
+      if (!this.canUndo()) return false;
       this.history.pop();
       if (this.history.length) {
         this.restoreState(this.history[this.history.length - 1]);
@@ -591,9 +611,10 @@
 
       const completedCardsData = this.completed_cards.map((card) => this.serializeCard(card));
 
-      const canUndo = this.history.length > 0;
+      const canUndo = this.canUndo();
 
-      const historyData = this.history.map((state) => ({
+      // 「土台」は内部用なので、画面の操作履歴には出さない
+      const historyData = this.history.filter((state) => !state.baseline).map((state) => ({
         action: state.action !== undefined ? state.action : '不明な操作',
         timestamp: state.timestamp !== undefined ? state.timestamp : '',
         cards: state.cards || [],
@@ -754,7 +775,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history']);
 
   function defaultStorage() {
     try {
@@ -776,6 +797,9 @@
       this.storageAvailable = !!this.storage;
       this.restored = false;
       this.listeners = [];
+      // 状態を変えた操作に成功した回数（保存はしない）。
+      // 「スタッフモード中に何か操作したか」を、画面側が前後の差で調べるために使う。
+      this.mutationCount = 0;
 
       this.game = new LuckyBoxGame(this.cards);
       const payload = this.store.load();
@@ -821,7 +845,10 @@
         console.error(`API処理エラー (${endpoint}):`, err);
         result = { success: false, error: String(err && err.message ? err.message : err) };
       }
-      if (MUTATING.has(endpoint) && result && result.success) this._persist();
+      if (MUTATING.has(endpoint) && result && result.success) {
+        this.mutationCount += 1;
+        this._persist();
+      }
       return result;
     }
 
@@ -865,6 +892,13 @@
       if (endpoint === 'undo') {
         const success = game.undo();
         return { success, game_state: game.getGameState() };
+      }
+
+      // 操作履歴（Undo用）だけを全部消す。現在の盤面・得点・トークンはそのまま。
+      // スタッフモードを終えるとき、スタッフの操作をユーザーが Undo で取り消せないようにするために使う。
+      if (endpoint === 'clear_history') {
+        game.clearHistory();
+        return { success: true, game_state: game.getGameState() };
       }
 
       if (endpoint === 'reset') {

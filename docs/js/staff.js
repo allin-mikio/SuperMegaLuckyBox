@@ -42,9 +42,14 @@
 
   /* ---------------- モード切り替え ---------------- */
   function setStaffMode(on) {
+    const changed = isStaff !== on;
     isStaff = on;
     body.classList.toggle('staff-mode', on);
     banner.hidden = !on;
+    // 入った/出たことを他のスクリプト（game.js）へ知らせる
+    if (changed) {
+      document.dispatchEvent(new CustomEvent('staffmodechange', { detail: { on } }));
+    }
 
     if (on) {
       resetIdleDeadline();

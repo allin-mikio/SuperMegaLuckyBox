@@ -6,7 +6,34 @@ class LuckyBoxUI {
         this.currentRound = 'tutorial';  // デフォルトラウンド
         this.manualBonusStates = new Map();
         this.setupEventListeners();
+        this.setupStaffHistoryGuard();
         this.initializeGame();
+    }
+
+    // スタッフモード中に何か操作した場合、スタッフモードを終えるときに操作履歴（Undo用）を全部消す。
+    // スタッフが行った操作（カード追加・トークン増減など）を、ユーザーが Undo で取り消せないようにするため。
+    // 何も操作せず見ただけで戻った場合は、履歴を消さない（ユーザーの Undo を残す）。
+    setupStaffHistoryGuard() {
+        let countAtEnter = null;
+
+        document.addEventListener('staffmodechange', async (event) => {
+            const api = window.LuckyBoxEngine.getApi();
+
+            if (event.detail.on) {
+                countAtEnter = api.mutationCount;
+                return;
+            }
+
+            const operated = countAtEnter !== null && api.mutationCount !== countAtEnter;
+            countAtEnter = null;
+            if (!operated) return;
+
+            const result = await this.apiCall('clear_history', {});
+            if (result && result.success) {
+                this.gameState = result.game_state;
+                this.updateDisplay();
+            }
+        });
     }
     
     async initializeGame() {
