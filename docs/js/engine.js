@@ -16,6 +16,19 @@
   const cellKey = (row, col) => `${row},${col}`;
   const bonusKey = (type, index) => `${type}:${index}`;
 
+  /*
+   * シール（統合マス）の設定。ラウンド4の「Last」だけが対象。
+   * 現実で貼ったシールと同じ盤面を、スタッフがアプリ上で作る（貼れるのは、プレイ前＝黒マスが1つもないときだけ）。
+   *   ・シールは正方形で、3x3 は1枚まで、2x2 は4枚まで（重ならない範囲で、どこにでも置ける）
+   *   ・シールの下に隠れた元の数字は使わない。シールのマスには label を表示する
+   *   ・行・列のボーナスは、シールの有無にかかわらず元のカードのまま
+   */
+  const STICKER_CONFIG = {
+    cards: ['Last'],
+    max: { 3: 1, 2: 4 },
+    label: 'x', // いまは固定。のちに、チーム名を選んで表示する予定
+  };
+
   /* ------------------------------------------------------------------ */
   /* BingoCard                                                           */
   /* ------------------------------------------------------------------ */
@@ -373,6 +386,63 @@
       this.updateScore();
       this.saveState(`カード完了（コンプリートへ移動）: ${card.card_id}`);
       return true;
+    }
+
+    // シールの貼り方を設定する。stickers は [{row, col, size}]（row, col は左上のマス、size は 2 か 3）。
+    // 成功したら null、できないときは理由の文字列を返す。
+    setStickers(cardIndex, stickers) {
+      if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= this.cards.length) {
+        return 'カードが見つかりません';
+      }
+      const card = this.cards[cardIndex];
+      if (!STICKER_CONFIG.cards.includes(card.card_id)) return 'このカードにはシールを貼れません';
+      if (card.marked.some((rowMarks) => rowMarks.some(Boolean))) {
+        return '黒マスがあるため、シールを変更できません';
+      }
+
+      const [rows, cols] = card.size;
+      const used = Array.from({ length: rows }, () => new Array(cols).fill(false));
+      const counts = {};
+      const normalized = [];
+      for (const s of stickers) {
+        const size = Number(s && s.size);
+        const row = Number(s && s.row);
+        const col = Number(s && s.col);
+        if (!Object.prototype.hasOwnProperty.call(STICKER_CONFIG.max, size)) return 'シールの大きさが正しくありません';
+        if (!Number.isInteger(row) || !Number.isInteger(col)) return 'シールの位置が正しくありません';
+        if (row < 0 || col < 0 || row + size > rows || col + size > cols) return 'シールが盤面からはみ出します';
+        counts[size] = (counts[size] || 0) + 1;
+        if (counts[size] > STICKER_CONFIG.max[size]) return `${size}x${size} のシールは、あと貼れません`;
+        for (let r = row; r < row + size; r++) {
+          for (let c = col; c < col + size; c++) {
+            if (used[r][c]) return '他のシールと重なっています';
+            used[r][c] = true;
+          }
+        }
+        normalized.push({ row, col, size });
+      }
+      normalized.sort((a, b) => (a.row - b.row) || (a.col - b.col));
+
+      // 元の盤面（カード定義）を土台に、シールの左上のマスの表示を label に置き換える
+      const base = this.available_cards[card.card_id].display_grid;
+      const grid = clone(base);
+      const groups = normalized.map(({ row, col, size }) => {
+        const cells = [];
+        for (let r = row; r < row + size; r++) {
+          for (let c = col; c < col + size; c++) cells.push([r, c]);
+        }
+        grid[row][col] = STICKER_CONFIG.label;
+        return { display_value: STICKER_CONFIG.label, cells };
+      });
+
+      card.display_grid = grid;
+      card.numbers = grid;
+      card._initializeMergedGroups(groups);
+      card._recalculateGroupMarkedStates();
+
+      this.updateScore();
+      this.saveState(`シール編集: ${card.card_id}`);
+      return null;
     }
 
     /* ---- セル操作 ---- */
@@ -797,7 +867,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers']);
 
   function defaultStorage() {
     try {
@@ -916,6 +986,16 @@
         return { success, game_state: game.getGameState() };
       }
 
+      if (endpoint === 'set_stickers') {
+        const d = data || {};
+        if (d.card_index == null || !Array.isArray(d.stickers)) {
+          return { success: false, error: '必要なパラメータが不足しています' };
+        }
+        const error = game.setStickers(Number(d.card_index), d.stickers);
+        if (error) return { success: false, error, game_state: game.getGameState() };
+        return { success: true, game_state: game.getGameState() };
+      }
+
       if (endpoint === 'complete_card') {
         const d = data || {};
         if (d.card_index == null) return { success: false, error: '必要なパラメータが不足しています' };
@@ -1021,5 +1101,5 @@
     return sharedApi;
   }
 
-  global.LuckyBoxEngine = { BingoCard, LuckyBoxGame, LocalApi, StateStore, cyrb53, uiState, getApi };
+  global.LuckyBoxEngine = { BingoCard, LuckyBoxGame, LocalApi, StateStore, cyrb53, uiState, getApi, STICKER_CONFIG };
 })(typeof window !== 'undefined' ? window : globalThis);

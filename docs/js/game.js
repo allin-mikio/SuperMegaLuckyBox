@@ -7,6 +7,14 @@ class LuckyBoxUI {
         this.manualBonusStates = new Map();
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
+        this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
+        // スタッフモードを終えたら、シール編集も終える
+        document.addEventListener('staffmodechange', (event) => {
+            if (!event.detail.on && this.stickerEdit) {
+                this.stickerEdit = null;
+                if (this.gameState) this.updateDisplay();
+            }
+        });
         this.initializeGame();
     }
 
@@ -488,9 +496,12 @@ class LuckyBoxUI {
         if (!cardSelect) return;
         
         // 現在追加されているカードのIDを取得
-        const addedCardIds = this.gameState && this.gameState.cards 
-            ? this.gameState.cards.map(card => card.card_id) 
+        // （盤面にあるカードと、コンプリートのプールに移ったカードは、追加できない）
+        const addedCardIds = this.gameState
+            ? (this.gameState.cards || []).concat(this.gameState.completed_cards || []).map(card => card.card_id)
             : [];
+        // 今後は使わないカード。ラウンド4は Last 1枚だけを登録し、シールを貼って変化させる
+        const hiddenCardIds = ['LastSP'];
         
         // セレクトボックスをクリア
         cardSelect.innerHTML = '<option value="">-- カードを選択 --</option>';
@@ -498,7 +509,7 @@ class LuckyBoxUI {
         // カードオプションを追加（追加済みのカードは除外）
         let availableCardsCount = 0;
         cards.forEach(card => {
-            if (!addedCardIds.includes(card.card_id)) {
+            if (!addedCardIds.includes(card.card_id) && !hiddenCardIds.includes(card.card_id)) {
                 const option = document.createElement('option');
                 option.value = card.card_id;
                 option.textContent = card.display_name;
@@ -565,6 +576,107 @@ class LuckyBoxUI {
         }
     }
 
+    /* ---------------- シール編集（ラウンド4の Last） ---------------- */
+    // 現実で貼ったシールと同じ盤面を、スタッフがアプリ上で作る。
+    //   「シール編集」→ 3x3 / 2x2 を選ぶ → 貼る位置の左上のマスをタップ（貼ったシールをタップすると外す）→「完了」
+
+    // カードの統合マス（シール）の一覧 [{row, col, size}] を、盤面の情報から求める
+    getStickers(card) {
+        return (card.merged_groups || [])
+            .filter((group) => Array.isArray(group) && group.length)
+            .map((group) => {
+                const rows = group.map((cell) => cell[0]);
+                const cols = group.map((cell) => cell[1]);
+                const row = Math.min(...rows);
+                const col = Math.min(...cols);
+                return { row, col, size: Math.max(...rows) - row + 1 };
+            });
+    }
+
+    createStickerTools(card, editing) {
+        const config = window.LuckyBoxEngine.STICKER_CONFIG;
+        if (!config.cards.includes(card.card_id)) return '';
+
+        if (!editing) {
+            return `
+                <div class="sticker-tools staff-only">
+                    <button type="button" class="sticker-btn" onclick="window.luckyBoxUI.startStickerEdit('${card.card_id}')">シール編集</button>
+                </div>`;
+        }
+
+        const stickers = this.getStickers(card);
+        const left = (size) => config.max[size] - stickers.filter((s) => s.size === size).length;
+        const tool = this.stickerEdit.tool;
+        const message = this.stickerEdit.message
+            ? `<div class="sticker-msg">${this.stickerEdit.message}</div>`
+            : '';
+        return `
+            <div class="sticker-tools staff-only editing">
+                <span class="sticker-title">シール編集中</span>
+                <button type="button" class="sticker-btn${tool === 3 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(3)">3x3（あと${left(3)}枚）</button>
+                <button type="button" class="sticker-btn${tool === 2 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(2)">2x2（あと${left(2)}枚）</button>
+                <button type="button" class="sticker-btn done" onclick="window.luckyBoxUI.endStickerEdit()">完了</button>
+                <div class="sticker-help">貼る位置の左上のマスをタップ。貼ったシール（${config.label}）をタップすると外れます。</div>
+                ${message}
+            </div>`;
+    }
+
+    startStickerEdit(cardId) {
+        const card = (this.gameState.cards || []).find((c) => c.card_id === cardId);
+        if (!card) return;
+        if ((card.marked || []).some((rowMarks) => rowMarks.some(Boolean))) {
+            alert('黒マスがあるため、シールを変更できません。');
+            return;
+        }
+        this.stickerEdit = { cardId, tool: 3, message: '' };
+        this.updateDisplay();
+    }
+
+    setStickerTool(size) {
+        if (!this.stickerEdit) return;
+        this.stickerEdit.tool = size;
+        this.stickerEdit.message = '';
+        this.updateDisplay();
+    }
+
+    endStickerEdit() {
+        this.stickerEdit = null;
+        this.updateDisplay();
+    }
+
+    // シール編集中にマスをタップしたとき（markCell から呼ばれる）
+    async handleStickerTap(cardIndex, row, col) {
+        const card = this.gameState.cards[cardIndex];
+        if (!card) return;
+        const [rows, cols] = card.size;
+        const stickers = this.getStickers(card);
+
+        // すでにシールがある場所なら、そのシールを外す
+        const hit = stickers.findIndex((s) =>
+            row >= s.row && row < s.row + s.size && col >= s.col && col < s.col + s.size);
+        let next;
+        if (hit >= 0) {
+            next = stickers.filter((_, i) => i !== hit);
+        } else {
+            // タップしたマスを左上として貼る。盤面の端でははみ出さないよう、内側へずらす
+            const size = this.stickerEdit.tool;
+            next = stickers.concat([{
+                row: Math.min(row, rows - size),
+                col: Math.min(col, cols - size),
+                size
+            }]);
+        }
+
+        const result = await this.apiCall('set_stickers', { card_index: cardIndex, stickers: next });
+        if (result && result.success) {
+            this.stickerEdit.message = '';
+        } else {
+            this.stickerEdit.message = (result && result.error) || 'シールを変更できませんでした';
+        }
+        if (result && result.game_state) this.gameState = result.game_state;
+        this.updateDisplay();
+    }
+
     // 「Complete」ボタン: カードをカレントのプールから外して、コンプリートのプールへ移す
     async completeCard(cardIndex) {
         try {
@@ -609,6 +721,7 @@ class LuckyBoxUI {
     async reset(confirmed = false) {
         try {
             console.log('Reset処理開始');
+            this.stickerEdit = null;
             
             if (!confirmed) {
                 if (!confirm('本当にゲームをリセットしますか？\nすべての進行状況が失われます。')) {
@@ -653,6 +766,13 @@ class LuckyBoxUI {
     }
 
     async markCell(cardIndex, row, col) {
+        // シール編集中のカードのマスをタップしたときは、マークではなくシールの貼り外しにする
+        const tappedCard = this.gameState && this.gameState.cards && this.gameState.cards[cardIndex];
+        if (this.stickerEdit && tappedCard && tappedCard.card_id === this.stickerEdit.cardId) {
+            await this.handleStickerTap(cardIndex, row, col);
+            return;
+        }
+
         // 既に処理中の場合は何もしない
         if (this.isMarkingCell) {
             console.log('既にセルマーク処理中です');
@@ -1025,9 +1145,16 @@ class LuckyBoxUI {
             </div>
         ` : '';
 
+        // シール編集（ラウンド4の Last）。スタッフモードのときだけ見える
+        const stickerEditing = !!(this.stickerEdit && this.stickerEdit.cardId === card.card_id);
+        const stickerToolsHtml = (!disableInteractions && cardIndex !== null)
+            ? this.createStickerTools(card, stickerEditing)
+            : '';
+
         return `
-            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
+            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">カード ${card.card_id}</div>
+                ${stickerToolsHtml}
                 <div class="card-content">
                     <div class="bingo-board" style="--cols: ${colCount};">
                         ${mainGridHtml}

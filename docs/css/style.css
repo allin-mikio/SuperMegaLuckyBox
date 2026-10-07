@@ -1158,6 +1158,67 @@ body #lightning-minus2.lightning-effect-btn.active {
     transform: scale(0.94);
 }
 
+/* シール編集（ラウンド4の Last。スタッフモードのみ） */
+.bingo-card .sticker-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+}
+
+.bingo-card .sticker-title {
+    font-weight: bold;
+    color: #4B0082;
+}
+
+.bingo-card .sticker-btn {
+    padding: 6px 10px;
+    border: 1px solid #4B0082;
+    border-radius: 6px;
+    background: #fff;
+    color: #4B0082;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.bingo-card .sticker-btn.active {
+    background: #4B0082;
+    color: #fff;
+}
+
+.bingo-card .sticker-btn.done {
+    margin-left: auto;
+    border-color: #2E7D32;
+    background: #2E7D32;
+    color: #fff;
+}
+
+.bingo-card .sticker-help {
+    flex-basis: 100%;
+    color: #555;
+    font-size: 0.72rem;
+}
+
+.bingo-card .sticker-msg {
+    flex-basis: 100%;
+    color: #C62828;
+    font-weight: bold;
+}
+
+.bingo-card.sticker-editing {
+    outline: 3px dashed #4B0082;
+    outline-offset: 2px;
+}
+
+.bingo-card.sticker-editing .bingo-cell {
+    cursor: crosshair;
+}
+
 @keyframes complete-pulse {
     0%, 100% { box-shadow: 0 0 6px rgba(198, 40, 40, 0.5); }
     50% { box-shadow: 0 0 16px rgba(198, 40, 40, 0.95); }
