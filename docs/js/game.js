@@ -176,6 +176,7 @@ class LuckyBoxUI {
 
         // トークンボタンの設定
         this.setupTokenButtons();
+        this.setupLightningTray();
         
         // セルクリックイベントの設定
         this.setupCellClickEvents();
@@ -218,6 +219,36 @@ class LuckyBoxUI {
         console.log('セルクリックイベント設定完了');
     }
     
+    // 雷トークンの表示（Bingo Cards 見出しの右）。
+    // 持っている数だけ⚡を並べ、ユーザーが使うときに⚡をタップすると1つ減る（使用の宣言自体はアプリの管理外）。
+    // スタッフモードでは、末尾の「＋」で1つ増やせる（数え間違いの修正用）。
+    setupLightningTray() {
+        const tray = document.getElementById('lightning-tray');
+        if (!tray) return;
+
+        tray.addEventListener('click', (event) => {
+            if (event.target.closest('.lightning-token')) {
+                this.adjustTokens('lightning', -1);
+            } else if (event.target.closest('.lightning-add')) {
+                this.adjustTokens('lightning', 1);
+            }
+        });
+    }
+
+    renderLightningTray() {
+        const tray = document.getElementById('lightning-tray');
+        if (!tray || !this.gameState) return;
+
+        const count = Math.max(0, this.gameState.lightning_tokens || 0);
+        // 数が変わっていなければ作り直さない（画面のちらつき・スクロール位置のずれを避ける）
+        if (this._lightningShown === count && tray.childElementCount) return;
+        this._lightningShown = count;
+
+        const icons = '<button type="button" class="lightning-token" aria-label="雷を1つ使う">⚡</button>'.repeat(count);
+        const add = '<button type="button" class="lightning-add staff-only" aria-label="雷を1つ増やす">＋</button>';
+        tray.innerHTML = icons + add;
+    }
+
     // トークンボタンの設定
     setupTokenButtons() {
         console.log('トークンボタン設定開始');
@@ -914,7 +945,7 @@ class LuckyBoxUI {
                 ? ''
                 : `onclick="window.luckyBoxUI.toggleBonus(this)"`;
             return `
-                <div class="bonus-cell ${type}-bonus ${bonusClass}" 
+                <div class="bonus-cell ${type}-bonus ${bonusClass}${this.isMoonStarBonus(bonusItems) ? ' bonus-pink' : ''}" 
                      data-card-index="${cardIndex !== null ? cardIndex : ''}" 
                      data-card-id="${card.card_id}"
                      data-bonus-key="${bonusKey}"
@@ -1140,10 +1171,18 @@ class LuckyBoxUI {
             return 'available';
         }
 
-        const tokenBonuses = new Set(['lightning', 'moon', 'star']);
-        const hasTokenBonus = bonusItems.some(item => tokenBonuses.has(item));
+        // 雷だけのマスは、ビンゴの瞬間に雷が自動で増えるので、最初からグレー（使用済み）にする。
+        // 月・星・数字・？のマスは、ビンゴが揃ったら「有効（タップ待ち）」にし、
+        // 運営が現物を渡す／ユーザーが使うときにタップしてグレーにする。
+        const allLightning = bonusItems.every(item => item === 'lightning');
 
-        return hasTokenBonus ? 'used' : 'available';
+        return allLightning ? 'used' : 'available';
+    }
+
+    // 月・星だけのマスか（有効時に、数字などの黄緑ではなく薄いピンクで表示する）
+    isMoonStarBonus(bonusItems) {
+        return Array.isArray(bonusItems) && bonusItems.length > 0
+            && bonusItems.every(item => item === 'moon' || item === 'star');
     }
 
     // ---- 画面状態の保存・復元（再起動後のレジューム用） ----
@@ -1217,6 +1256,7 @@ class LuckyBoxUI {
         
         // ボタンの有効/無効制御も更新
         this.updateTokenButtonStates();
+        this.renderLightningTray();
     }
 
     updateHistoryDisplay() {
@@ -1357,6 +1397,7 @@ class LuckyBoxUI {
         
         // トークンボタンの状態を更新
         this.updateTokenButtonStates();
+        this.renderLightningTray();
     }
 
     // ボーナスの状態を取得

@@ -608,6 +608,51 @@ body #lightning-minus2.lightning-effect-btn.active {
     padding-bottom: 0;
 }
 
+/* 見出しの右に並べる雷トークン（持っている数だけ⚡。タップで1つ減る） */
+.lightning-tray {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.lightning-token,
+.lightning-add {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 1.7rem;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.lightning-token {
+    background: #FFF6BF;
+    border: 2px solid #E0B000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.lightning-token:active {
+    transform: scale(0.92);
+    background: #FFE680;
+}
+
+/* スタッフ専用の「＋」（雷を1つ増やす） */
+.lightning-add {
+    background: #fff;
+    border: 2px dashed #888;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
 /* 見出し右のボタン群（Undo、スタッフモード時はオールリセットも） */
 .header-actions {
     display: flex;

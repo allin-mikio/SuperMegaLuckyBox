@@ -235,6 +235,13 @@
     z-index: 1 !important;
 }
 
+/* 月・星のボーナス（有効時）は、数字・？の黄緑ではなく薄いピンク。タップでグレーになる動きは同じ */
+.bonus-cell.available.bonus-pink {
+    background: linear-gradient(135deg, #FFE9F0 0%, #FFB8D0 100%) !important;
+    border-color: #D6638B !important;
+    box-shadow: 0 0 10px rgba(214, 99, 139, 0.55) !important;
+}
+
 /* ボーナス使用済み */
 .bonus-cell.used,
 .col-bonus.used {

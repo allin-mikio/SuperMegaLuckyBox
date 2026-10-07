@@ -70,8 +70,9 @@
             </section>
 
 
-            <!-- ゲーム状態表示（ビンゴカードの上） -->
-            <section class="game-status">
+            <!-- ゲーム状態表示（現在は非表示。雷は下の Bingo Cards 見出しの右、月・星は現物管理）。
+                 復活させるときは、下の class から feature-off を外す -->
+            <section class="game-status feature-off">
                 <h2>📊 Game Stats</h2>
                 <div class="status-grid">
                     <div class="status-item token-status token-status--lightning">
@@ -121,6 +122,8 @@
             <section class="bingo-cards">
                 <div class="section-header">
                     <h2>🗂️ Bingo Cards</h2>
+                    <!-- 雷トークン：持っている数だけ⚡を並べる。使うときにタップすると1つ減る（中身は game.js が作る） -->
+                    <div id="lightning-tray" class="lightning-tray" role="group" aria-label="雷"></div>
                     <div class="header-actions">
                         <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
                         <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
