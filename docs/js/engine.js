@@ -246,6 +246,9 @@
       this.score = 0;
       this.score_details = { completed_points: 0, active_black_cells: 0, active_points: 0, total: 0 };
       this.round_num = 1;
+      // 画面でタップして「使用済み（グレー）」にしたボーナス欄のキー（例: "G11:row:0"）。
+      // 操作履歴の各スナップショットにも含めるので、Undo すると、そのときの使用状態に戻る。
+      this.bonus_states = [];
       this.history = [];
       this.available_cards = clone(def.cards);
       this.cards_by_round = clone(def.cardsByRound);
@@ -508,6 +511,7 @@
         score: this.score,
         score_details: Object.assign({}, this.score_details),
         round_num: this.round_num,
+        bonus_states: this.bonus_states.slice(),
         action: actionDescription,
         timestamp: new Date().toISOString(),
       };
@@ -568,6 +572,7 @@
       this.star_tokens = state.star_tokens !== undefined ? state.star_tokens : 0;
       this.score = state.score !== undefined ? state.score : 0;
       this.round_num = state.round_num !== undefined ? state.round_num : 1;
+      this.bonus_states = Array.isArray(state.bonus_states) ? state.bonus_states.slice() : [];
 
       this.cards = [];
       this.completed_cards = [];
@@ -589,6 +594,7 @@
       this.score = 0;
       this.score_details = { completed_points: 0, active_black_cells: 0, active_points: 0, total: 0 };
       this.round_num = 1;
+      this.bonus_states = [];
       this.history = [];
       this.updateScore();
       return true;
@@ -775,7 +781,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states']);
 
   function defaultStorage() {
     try {
@@ -835,6 +841,11 @@
           console.error(err);
         }
       });
+    }
+
+    // 「使用済み」のボーナス欄のキー一覧（画面の描画用。ゲーム状態 getGameState とは別にしてある）
+    getBonusStates() {
+      return this.game.bonus_states.slice();
     }
 
     call(endpoint, data = null) {
@@ -899,6 +910,16 @@
       if (endpoint === 'clear_history') {
         game.clearHistory();
         return { success: true, game_state: game.getGameState() };
+      }
+
+      // 「使用済み」にしたボーナス欄のキー一覧を保存する（操作履歴は増やさない）。
+      // 直後の操作（盤面のマスをタップなど）のスナップショットに含まれるので、
+      // その操作を Undo すると、ボーナス欄の使用状態も一緒に戻る。
+      if (endpoint === 'set_bonus_states') {
+        const used = data && Array.isArray(data.used) ? data.used : null;
+        if (!used) return { success: false, error: 'used が配列ではありません' };
+        game.bonus_states = used.filter((k) => typeof k === 'string');
+        return { success: true };
       }
 
       if (endpoint === 'reset') {

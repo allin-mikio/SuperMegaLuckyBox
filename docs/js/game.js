@@ -657,6 +657,9 @@ class LuckyBoxUI {
 
     updateDisplay() {
         console.log('表示更新開始');
+
+        // ボーナス欄の「使用済み」状態は、エンジンの現在の状態から読み直す（Undo 後も正しく戻るように）
+        this.loadBonusStates();
         
         this.updateCardsDisplay();
         this.updateHistoryDisplay();
@@ -1198,20 +1201,13 @@ class LuckyBoxUI {
             }
         }
 
-        this.manualBonusStates.clear();
-        if (Array.isArray(saved.bonusStates)) {
-            saved.bonusStates.forEach(([key, value]) => {
-                if (typeof key === 'string' && (value === 'used' || value === 'available')) {
-                    this.manualBonusStates.set(key, value);
-                }
-            });
-        }
+        // ボーナス欄の使用状態は、エンジン側（Undo と一緒に戻る）に保存しているので、ここでは扱わない
+        this.loadBonusStates();
     }
 
     saveUiState() {
         window.LuckyBoxEngine.uiState.save({
-            currentRound: this.currentRound,
-            bonusStates: Array.from(this.manualBonusStates.entries())
+            currentRound: this.currentRound
         });
     }
 
@@ -1426,7 +1422,24 @@ class LuckyBoxUI {
             element.classList.add('available');
             this.manualBonusStates.delete(bonusKey);
         }
-        this.saveUiState();
+        this.saveBonusStates();
+    }
+
+    // 「使用済み」にしたボーナス欄の一覧は、ゲームエンジン側に保存する（Undo で一緒に戻すため）。
+    // 画面側の manualBonusStates は、描画のたびにエンジンの値から作り直す。
+    saveBonusStates() {
+        const used = [];
+        this.manualBonusStates.forEach((value, key) => {
+            if (value === 'used') used.push(key);
+        });
+        window.LuckyBoxEngine.getApi().call('set_bonus_states', { used });
+    }
+
+    loadBonusStates() {
+        this.manualBonusStates.clear();
+        window.LuckyBoxEngine.getApi().getBonusStates().forEach((key) => {
+            this.manualBonusStates.set(key, 'used');
+        });
     }
 }
 
