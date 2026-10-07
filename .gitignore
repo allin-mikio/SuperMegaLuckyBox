@@ -33,6 +33,7 @@ desktop.ini
 # 運営・開発の手元用メモ（暗証番号などを含むため、GitHub には上げない）
 運営メモ.md
 SBGC_H4.xlsx
+SBGC_H4_原稿01_横.pptx
 
 # テストの基準データ（tests/gen_golden.py で生成。約700KBあり再生成できるため管理しない）
 tests/golden.js
