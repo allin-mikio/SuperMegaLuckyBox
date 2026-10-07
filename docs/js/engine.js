@@ -457,16 +457,16 @@
       const number = card.numbers[row][col];
 
       const groupIndex = card.cell_to_group.get(cellKey(row, col));
+      let actionLabel = null;
       if (groupIndex !== undefined) {
-        card._markGroup(groupIndex);
-        this.updateScore();
-        this.saveState(`セル統合マス追加: ${cardId}`);
-        return true;
+        // 統合マス: グループ全体をマークしたあと、通常のマスと同じく
+        // ビンゴ判定・ボーナス処理・コンプリート判定を行う（以下の共通処理へ進む）
+        if (!card._markGroup(groupIndex)) return true; // すでにマーク済み
+        actionLabel = `セル統合マス追加: ${cardId}`;
+      } else {
+        if (card.marked[row][col]) return true;
+        card.marked[row][col] = true;
       }
-
-      if (card.marked[row][col]) return true;
-
-      card.marked[row][col] = true;
 
       const completedLines = card.checkCompletedLines();
       let bonusAction = '';
@@ -517,7 +517,7 @@
       }
 
       this.updateScore();
-      this.saveState(`${cardId}の${number}をマーク${bonusAction}${completionAction}`);
+      this.saveState(`${actionLabel || `${cardId}の${number}をマーク`}${bonusAction}${completionAction}`);
       return true;
     }
 

@@ -723,23 +723,24 @@ class LuckyBoxGame:
         # 既にマークされている場合は成功として扱う
         group_index = card.cell_to_group.get((row, col))
 
+        action_label = None
         if group_index is not None:
+            # 統合マス: グループ全体をマークしたあと、通常のマスと同じく
+            # ビンゴ判定・ボーナス処理・コンプリート判定を行う（以下の共通処理へ進む）
             print(f"統合マスをマーク: グループ{group_index}")
             changed = card._mark_group(group_index)
             if not changed:
-                print(f"統合マス{group_index}は既にマーク済み")
-            # スコアを更新して保存
-            self.update_score()
-            self.save_state(f"セル統合マス追加: {card_id}")
-            return True
+                print(f"統合マス{group_index}は既にマーク済み (成功として扱う)")
+                return True
+            action_label = f"セル統合マス追加: {card_id}"
+        else:
+            if card.marked[row][col]:
+                print(f"既にマーク済み: カード{card_index}[{row}][{col}] = {number} (成功として扱う)")
+                return True
 
-        if card.marked[row][col]:
-            print(f"既にマーク済み: カード{card_index}[{row}][{col}] = {number} (成功として扱う)")
-            return True
-        
-        # セルをマーク
-        card.marked[row][col] = True
-        print(f"セルマーク成功: カード{card_index}[{row}][{col}] = {number}")
+            # セルをマーク
+            card.marked[row][col] = True
+            print(f"セルマーク成功: カード{card_index}[{row}][{col}] = {number}")
         
         # ビンゴ判定とボーナス処理
         completed_lines = card.check_completed_lines()
@@ -801,7 +802,9 @@ class LuckyBoxGame:
 
         # スコアを更新し、操作後の状態を保存（1回だけ）
         self.update_score()
-        self.save_state(f"{card_id}の{number}をマーク{bonus_action}{completion_action}")
+        if action_label is None:
+            action_label = f"{card_id}の{number}をマーク"
+        self.save_state(f"{action_label}{bonus_action}{completion_action}")
         
         return True
     
