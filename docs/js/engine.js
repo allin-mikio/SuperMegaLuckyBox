@@ -20,14 +20,15 @@
    * シール（統合マス）の設定。ラウンド4の「Last」だけが対象。
    * 現実で貼ったシールと同じ盤面を、スタッフがアプリ上で作る（貼れるのは、プレイ前＝黒マスが1つもないときだけ）。
    *   ・シールは正方形で、3x3 は1枚まで、2x2 は4枚まで（重ならない範囲で、どこにでも置ける）
-   *   ・シールの下に隠れた元の数字は使わない。シールのマスには label を表示する
+   *   ・シールの下に隠れた元の数字は使わない。シールのマスには、選んだチームの文字を表示する
    *   ・行・列のボーナスは、シールの有無にかかわらず元のカードのまま
    */
   const STICKER_CONFIG = {
     cards: ['Last'],
     max: { 3: 1, 2: 4 },
-    label: 'x', // いまは固定。のちに、チーム名を選んで表示する予定
+    teams: ['x', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'], // 先頭が初期値（チーム未選択）
   };
+  const DEFAULT_TEAM = STICKER_CONFIG.teams[0];
 
   /* ------------------------------------------------------------------ */
   /* BingoCard                                                           */
@@ -110,6 +111,18 @@
       });
 
       this.merged_groups = this.merged_groups_info.map((info) => info.cells);
+    }
+
+    // 統合マス（シール）に表示する文字を付け替える（シールだけのカード用。左上のマスに表示される）
+    relabelStickers(label) {
+      this.merged_groups_info.forEach((info, idx) => {
+        info.display_value = label;
+        this.merged_group_display_values[idx] = label;
+        if (!info.cells.length) return;
+        const [row, col] = info.cells[0];
+        this.display_grid[row][col] = label;
+        this.numbers[row][col] = label;
+      });
     }
 
     _recalculateGroupMarkedStates() {
@@ -262,6 +275,8 @@
       // 画面でタップして「使用済み（グレー）」にしたボーナス欄のキー（例: "G11:row:0"）。
       // 操作履歴の各スナップショットにも含めるので、Undo すると、そのときの使用状態に戻る。
       this.bonus_states = [];
+      // このタブレットのチーム（シールに表示する文字）。スタッフモードで選ぶ
+      this.team = DEFAULT_TEAM;
       this.history = [];
       this.available_cards = clone(def.cards);
       this.cards_by_round = clone(def.cardsByRound);
@@ -431,8 +446,8 @@
         for (let r = row; r < row + size; r++) {
           for (let c = col; c < col + size; c++) cells.push([r, c]);
         }
-        grid[row][col] = STICKER_CONFIG.label;
-        return { display_value: STICKER_CONFIG.label, cells };
+        grid[row][col] = this.team;
+        return { display_value: this.team, cells };
       });
 
       card.display_grid = grid;
@@ -442,6 +457,20 @@
 
       this.updateScore();
       this.saveState(`シール編集: ${card.card_id}`);
+      return null;
+    }
+
+    // チーム（シールに表示する文字）を設定する。すでに貼ってあるシールの文字も付け替える。
+    // 成功したら null、できないときは理由の文字列を返す。
+    setTeam(team) {
+      if (!STICKER_CONFIG.teams.includes(team)) return 'チームが正しくありません';
+      if (team === this.team) return null;
+
+      this.team = team;
+      for (const card of this.cards.concat(this.completed_cards)) {
+        if (STICKER_CONFIG.cards.includes(card.card_id)) card.relabelStickers(team);
+      }
+      // チームは Undo の対象外（操作履歴には残さない）。保存は、呼び出し側（LocalApi）が行う
       return null;
     }
 
@@ -598,6 +627,7 @@
         score_details: Object.assign({}, this.score_details),
         round_num: this.round_num,
         bonus_states: this.bonus_states.slice(),
+        team: this.team,
         action: actionDescription,
         timestamp: new Date().toISOString(),
       };
@@ -667,6 +697,10 @@
       }
       for (const cardState of state.completed_cards || []) {
         this.completed_cards.push(this.deserializeCard(cardState));
+      }
+      // シールの文字は、いまのチームに合わせる（Undo しても、チームは戻らない）
+      for (const card of this.cards.concat(this.completed_cards)) {
+        if (STICKER_CONFIG.cards.includes(card.card_id)) card.relabelStickers(this.team);
       }
       this.updateScore();
     }
@@ -763,6 +797,8 @@
         if (!payload || payload.version !== 1 || !payload.current || !Array.isArray(payload.history)) {
           return false;
         }
+        // チームは、Undo やオールリセットの影響を受けない設定なので、保存データから直接戻す
+        if (STICKER_CONFIG.teams.includes(payload.current.team)) this.team = payload.current.team;
         this.restoreState(payload.current);
         this.history = clone(payload.history);
         return true;
@@ -867,7 +903,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers', 'set_team']);
 
   function defaultStorage() {
     try {
@@ -934,6 +970,11 @@
       return this.game.bonus_states.slice();
     }
 
+    // 現在のチーム（画面の描画用。ゲーム状態 getGameState とは別にしてある）
+    getTeam() {
+      return this.game.team;
+    }
+
     call(endpoint, data = null) {
       let result;
       try {
@@ -984,6 +1025,12 @@
         }
         const success = game.markCell(d.card_index, d.row, d.col);
         return { success, game_state: game.getGameState() };
+      }
+
+      if (endpoint === 'set_team') {
+        const error = game.setTeam(data && data.team);
+        if (error) return { success: false, error };
+        return { success: true, game_state: game.getGameState() };
       }
 
       if (endpoint === 'set_stickers') {
@@ -1044,6 +1091,7 @@
 
       if (endpoint === 'reset') {
         const success = game.resetToInitial();
+        // チームは、オールリセットの影響を受けない（この端末のチームとして残す）
         return { success, game_state: game.getGameState() };
       }
 

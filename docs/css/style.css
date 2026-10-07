@@ -206,6 +206,28 @@ section {
     color: #333;
 }
 
+/* チーム選択（シールに表示する文字） */
+.team-setting {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 340px;
+    margin-bottom: 14px;
+}
+
+.team-setting label {
+    font-weight: bold;
+    color: #4B0082;
+    white-space: nowrap;
+}
+
+.team-setting select {
+    flex: 1;
+    border-color: #4B0082;
+    color: #4B0082;
+}
+
 .card-management-controls .btn {
     padding: 12px 20px;
     width: 100%;

@@ -52,6 +52,15 @@
             <section class="card-management staff-only">
                 <h2>⚙️ ビンゴカード管理</h2>
 
+                <!-- チーム選択（ラウンド4の Last のシールに表示する文字。選択肢は engine.js の STICKER_CONFIG.teams。
+                     この端末のチームなので、オールリセットでは変わらない） -->
+                <div class="team-setting">
+                    <label for="team-select">チーム</label>
+                    <select id="team-select" aria-label="チーム選択">
+                        <option value="x">x</option>
+                    </select>
+                </div>
+
                 <div class="card-management-controls">
                     <select id="round-select" aria-label="ラウンド選択">
                         <option value="tutorial">チュートリアル</option>

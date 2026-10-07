@@ -8,6 +8,7 @@ class LuckyBoxUI {
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
+        this.setupTeamSelect();
         // スタッフモードを終えたら、シール編集も終える
         document.addEventListener('staffmodechange', (event) => {
             if (!event.detail.on && this.stickerEdit) {
@@ -576,6 +577,33 @@ class LuckyBoxUI {
         }
     }
 
+    /* ---------------- チーム選択（シールに表示する文字） ---------------- */
+    setupTeamSelect() {
+        const select = document.getElementById('team-select');
+        if (!select) return;
+
+        select.innerHTML = '';
+        for (const team of window.LuckyBoxEngine.STICKER_CONFIG.teams) {
+            const option = document.createElement('option');
+            option.value = team;
+            option.textContent = team;
+            select.appendChild(option);
+        }
+        select.value = window.LuckyBoxEngine.getApi().getTeam();
+
+        select.addEventListener('change', async () => {
+            const result = await this.apiCall('set_team', { team: select.value });
+            if (result && result.game_state) this.gameState = result.game_state;
+            this.updateDisplay();
+        });
+    }
+
+    // 選択欄を、エンジンの現在のチームに合わせる（Undo・リセット・再読み込みのあとも正しく表示するため）
+    syncTeamSelect() {
+        const select = document.getElementById('team-select');
+        if (select) select.value = window.LuckyBoxEngine.getApi().getTeam();
+    }
+
     /* ---------------- シール編集（ラウンド4の Last） ---------------- */
     // 現実で貼ったシールと同じ盤面を、スタッフがアプリ上で作る。
     //   「シール編集」→ 3x3 / 2x2 を選ぶ → 貼る位置の左上のマスをタップ（貼ったシールをタップすると外す）→「完了」
@@ -616,7 +644,7 @@ class LuckyBoxUI {
                 <button type="button" class="sticker-btn${tool === 3 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(3)">3x3（あと${left(3)}枚）</button>
                 <button type="button" class="sticker-btn${tool === 2 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(2)">2x2（あと${left(2)}枚）</button>
                 <button type="button" class="sticker-btn done" onclick="window.luckyBoxUI.endStickerEdit()">完了</button>
-                <div class="sticker-help">貼る位置の左上のマスをタップ。貼ったシール（${config.label}）をタップすると外れます。</div>
+                <div class="sticker-help">貼る位置の左上のマスをタップ。貼ったシール（${window.LuckyBoxEngine.getApi().getTeam()}）をタップすると外れます。</div>
                 ${message}
             </div>`;
     }
@@ -812,6 +840,7 @@ class LuckyBoxUI {
 
         // ボーナス欄の「使用済み」状態は、エンジンの現在の状態から読み直す（Undo 後も正しく戻るように）
         this.loadBonusStates();
+        this.syncTeamSelect();
         
         this.updateCardsDisplay();
         this.updateHistoryDisplay();
