@@ -359,6 +359,22 @@
       return true;
     }
 
+    // 全マスが埋まったカードを、カレントのプール（this.cards）から外して、コンプリートのプールへ移す。
+    // 全マスが埋まった時点で、すでに completed_cards には入っている（markCell）ので、
+    // ここでは「カレントから消す」のが主な仕事。得点（コンプリート×10点）は変わらない。
+    completeCard(cardIndex) {
+      if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= this.cards.length) return false;
+      const card = this.cards[cardIndex];
+      if (!card.isComplete()) return false;
+
+      this.cards.splice(cardIndex, 1);
+      if (!this.completed_cards.some((c) => c.card_id === card.card_id)) this.completed_cards.push(card);
+
+      this.updateScore();
+      this.saveState(`カード完了（コンプリートへ移動）: ${card.card_id}`);
+      return true;
+    }
+
     /* ---- セル操作 ---- */
     markCell(cardIndex, row, col) {
       if (cardIndex < 0 || cardIndex >= this.cards.length) return false;
@@ -781,7 +797,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card']);
 
   function defaultStorage() {
     try {
@@ -897,6 +913,13 @@
           return { success: false, error: '必要なパラメータが不足しています' };
         }
         const success = game.markCell(d.card_index, d.row, d.col);
+        return { success, game_state: game.getGameState() };
+      }
+
+      if (endpoint === 'complete_card') {
+        const d = data || {};
+        if (d.card_index == null) return { success: false, error: '必要なパラメータが不足しています' };
+        const success = game.completeCard(Number(d.card_index));
         return { success, game_state: game.getGameState() };
       }
 

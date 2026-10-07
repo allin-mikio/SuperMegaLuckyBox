@@ -565,6 +565,23 @@ class LuckyBoxUI {
         }
     }
 
+    // 「Complete」ボタン: カードをカレントのプールから外して、コンプリートのプールへ移す
+    async completeCard(cardIndex) {
+        try {
+            const result = await this.apiCall('complete_card', { card_index: cardIndex });
+            if (result && result.success) {
+                this.gameState = result.game_state;
+                this.updateDisplay();
+            } else {
+                console.error('コンプリート移動失敗:', result);
+                alert(`Complete に失敗しました: ${result && result.error ? result.error : '全マスが埋まっていません'}`);
+            }
+        } catch (error) {
+            console.error('コンプリート移動エラー:', error);
+            alert(`エラーが発生しました: ${error.message}`);
+        }
+    }
+
     async undo() {
         try {
             console.log('Undo処理開始');
@@ -744,7 +761,10 @@ class LuckyBoxUI {
 
         // コンプリートカード描画
         if (completedContainer) {
-            const cards = [...(this.gameState.completed_cards || [])];
+            // コンプリートのプールに入っていて、かつ「Complete」ボタンでカレントから外されたカードだけを表示する
+            // （全マスが埋まっただけで、まだボタンを押していないカードは、盤面に残っている）
+            const activeIds = new Set((this.gameState.cards || []).map((c) => c.card_id));
+            const cards = (this.gameState.completed_cards || []).filter((c) => !activeIds.has(c.card_id));
             this.completedCards = cards;
             console.log('completed_cards:', cards);
 
@@ -944,9 +964,8 @@ class LuckyBoxUI {
             const dataAttr = type === 'row'
                 ? `data-row="${index}"`
                 : `data-col="${index}"`;
-            const clickHandler = disableInteractions || cardIndex === null
-                ? ''
-                : `onclick="window.luckyBoxUI.toggleBonus(this)"`;
+            // ボーナス欄は、コンプリート済みのカードでも押せる（Complete のあとでも、残りのボーナスを使えるように）
+            const clickHandler = `onclick="window.luckyBoxUI.toggleBonus(this)"`;
             return `
                 <div class="bonus-cell ${type}-bonus ${bonusClass}${this.isMoonStarBonus(bonusItems) ? ' bonus-pink' : ''}" 
                      data-card-index="${cardIndex !== null ? cardIndex : ''}" 
@@ -983,6 +1002,14 @@ class LuckyBoxUI {
             </div>
         ` : '';
 
+        // 盤面の右下の空き（行ボーナスの列の下・列ボーナスの行の右）に、全マスが埋まったら「Complete」ボタンを出す。
+        // 押すと、このカードはカレントのプールから消えて、コンプリートのプールへ移る。
+        const completeSlot = (card.is_complete && !disableInteractions && cardIndex !== null) ? `
+            <div class="complete-slot">
+                <button type="button" class="complete-btn" onclick="window.luckyBoxUI.completeCard(${cardIndex})">Complete</button>
+            </div>
+        ` : '';
+
         return `
             <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">カード ${card.card_id}</div>
@@ -991,6 +1018,7 @@ class LuckyBoxUI {
                         ${mainGridHtml}
                         ${rowBonusColumn}
                         ${colBonusStripHtml}
+                        ${completeSlot}
                     </div>
                 </div>
             </div>`;

@@ -134,7 +134,15 @@
                 </div>
             </section>
 
-            <!-- 履歴表示セクション -->
+            <!-- コンプリートカード表示（カードの右下の「Complete」ボタンを押したカードが、ここに移る） -->
+            <section class="completed-cards">
+                <h2>🏆 コンプリートカード</h2>
+                <div id="completed-cards-container" class="cards-container">
+                    <p class="no-cards">コンプリートカードはありません</p>
+                </div>
+            </section>
+
+            <!-- 履歴表示セクション（スタッフモードのみ。いちばん下） -->
             <section class="history-display staff-only">
                 <h2>📜 操作履歴</h2>
                 <div class="history-info">
@@ -142,14 +150,6 @@
                 </div>
                 <div id="history-list" class="history-list">
                     <p class="no-history">履歴がありません</p>
-                </div>
-            </section>
-
-            <!-- コンプリートカード表示（現在は全モードで非表示。復活させるときは feature-off クラスを外す） -->
-            <section class="completed-cards feature-off">
-                <h2>🏆 コンプリートカード</h2>
-                <div id="completed-cards-container" class="cards-container">
-                    <p class="no-cards">コンプリートカードはありません</p>
                 </div>
             </section>
 

@@ -675,7 +675,9 @@ body #lightning-minus2.lightning-effect-btn.active {
  * 並び替えたいときは、下の span の数字だけを変える。
  * （各カードの幅そのものは bingo-bonus-fix.css の max-width で決まる）
  */
-#cards-container {
+/* （コンプリートカードの欄 #completed-cards-container も、同じ並べ方） */
+#cards-container,
+#completed-cards-container {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     column-gap: 20px;
@@ -683,38 +685,49 @@ body #lightning-minus2.lightning-effect-btn.active {
     align-items: start;
 }
 
-#cards-container > .no-cards {
+#cards-container > .no-cards,
+#completed-cards-container > .no-cards {
     grid-column: 1 / -1;
 }
 
 /* 割り当てられた幅いっぱいに広げる（上限は bingo-bonus-fix.css の max-width）。隣のカードに重ならないようにする */
-#cards-container > .bingo-card {
+#cards-container > .bingo-card,
+#completed-cards-container > .bingo-card {
     min-width: 0;
     width: 100%;
 }
 
-#cards-container > .bingo-card.size-3 { grid-column: span 4; }
-#cards-container > .bingo-card.size-4 { grid-column: span 6; }
-#cards-container > .bingo-card.size-5 { grid-column: span 12; }
+#cards-container > .bingo-card.size-3,
+#completed-cards-container > .bingo-card.size-3 { grid-column: span 4; }
+#cards-container > .bingo-card.size-4,
+#completed-cards-container > .bingo-card.size-4 { grid-column: span 6; }
+#cards-container > .bingo-card.size-5,
+#completed-cards-container > .bingo-card.size-5 { grid-column: span 12; }
 
 /*
  * カードの幅の上限（--card-max）。1マスの大きさが、どの盤面サイズでもほぼ同じ（約74px）になる値。
  *   上限 = (列数 + 1) × 1マス + (列数 - 1) × 4px + 10px + カードの余白と枠（36px）
  * 1マスをもっと大きくしたいときは、ここの数字を大きくする。
  */
-#cards-container > .bingo-card.size-3 { --card-max: 350px; }
-#cards-container > .bingo-card.size-4 { --card-max: 430px; }
-#cards-container > .bingo-card.size-5 { --card-max: 510px; }
+#cards-container > .bingo-card.size-3,
+#completed-cards-container > .bingo-card.size-3 { --card-max: 350px; }
+#cards-container > .bingo-card.size-4,
+#completed-cards-container > .bingo-card.size-4 { --card-max: 430px; }
+#cards-container > .bingo-card.size-5,
+#completed-cards-container > .bingo-card.size-5 { --card-max: 510px; }
 
 /* 幅が狭い画面（スマホなど）: 3x3 は2枚並び、4x4 以上は1枚 */
 @media (max-width: 700px) {
-    #cards-container > .bingo-card.size-3 { grid-column: span 6; }
-    #cards-container > .bingo-card.size-4 { grid-column: span 12; }
+    #cards-container > .bingo-card.size-3,
+    #completed-cards-container > .bingo-card.size-3 { grid-column: span 6; }
+    #cards-container > .bingo-card.size-4,
+    #completed-cards-container > .bingo-card.size-4 { grid-column: span 12; }
 }
 
 /* さらに狭い画面: すべて1枚 */
 @media (max-width: 480px) {
-    #cards-container > .bingo-card.size-3 { grid-column: span 12; }
+    #cards-container > .bingo-card.size-3,
+    #completed-cards-container > .bingo-card.size-3 { grid-column: span 12; }
 }
 
 .no-cards {
@@ -1107,6 +1120,46 @@ body #lightning-minus2.lightning-effect-btn.active {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/*
+ * 盤面の右下の空き（行ボーナスの列の下・列ボーナスの行の右）に出す「Complete」ボタン。
+ * 全マスが埋まったカードにだけ出る。大きさは、盤面の1マス（--cell）と同じ。
+ */
+.bingo-card .complete-slot {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 2px; /* 列ボーナスの行（.col-bonus-strip の margin-top）に合わせる */
+    width: var(--cell);
+    height: var(--cell);
+}
+
+.bingo-card .complete-btn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 2px solid #7A0000;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #EF5350 0%, #C62828 100%);
+    color: #fff;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: calc(var(--cell) * 0.19);
+    line-height: 1.1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 10px rgba(198, 40, 40, 0.7);
+    animation: complete-pulse 1.6s ease-in-out infinite;
+}
+
+.bingo-card .complete-btn:active {
+    transform: scale(0.94);
+}
+
+@keyframes complete-pulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(198, 40, 40, 0.5); }
+    50% { box-shadow: 0 0 16px rgba(198, 40, 40, 0.95); }
 }
 
 .token-btn {
