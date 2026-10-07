@@ -10,7 +10,7 @@
 body {
     font-family: 'Comic Sans MS', 'Arial Black', sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 8px; /* 画面の端の余白。盤面のマスを大きくするため、最小限にしている */
     background: linear-gradient(45deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
     min-height: 100vh;
     color: #333;
@@ -38,7 +38,7 @@ body::before {
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    padding: 30px;
+    padding: 12px;
     box-shadow: 
         0 15px 35px rgba(0, 0, 0, 0.3),
         inset 0 2px 5px rgba(255, 255, 255, 0.8);
@@ -166,8 +166,8 @@ h2 {
 /* セクション共通スタイル */
 section {
     background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
-    margin-bottom: 25px;
-    padding: 20px;
+    margin-bottom: 16px;
+    padding: 12px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     border: 2px solid #E0E0E0;
@@ -680,8 +680,8 @@ body #lightning-minus2.lightning-effect-btn.active {
 #completed-cards-container {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    column-gap: 20px;
-    row-gap: 0; /* 縦の間隔は、各カードの margin-bottom(20px) が担う */
+    column-gap: 8px; /* カード同士の横の間隔（最小限） */
+    row-gap: 0; /* 縦の間隔は、各カードの margin-bottom が担う */
     align-items: start;
 }
 
@@ -706,7 +706,8 @@ body #lightning-minus2.lightning-effect-btn.active {
 
 /*
  * カードの幅の上限（--card-max）。1マスの大きさが、どの盤面サイズでもほぼ同じ（約74px）になる値。
- *   上限 = (列数 + 1) × 1マス + (列数 - 1) × 4px + 10px + カードの余白と枠（36px）
+ *   上限 = (列数 + 1) × 1マス + (列数 - 1) × 4px + 10px + カードの余白と枠（18px）
+ *   （カードの余白は bingo-bonus-fix.css の .bingo-card の padding と border で決まる）
  * 1マスをもっと大きくしたいときは、ここの数字を大きくする。
  */
 #cards-container > .bingo-card.size-3,
@@ -1402,7 +1403,7 @@ body.staff-mode .version-badge {
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
     .container {
-        padding: 10px;
+        padding: 8px;
     }
     
     h1 {
@@ -1443,8 +1444,8 @@ body.staff-mode .version-badge {
     }
     
     section {
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: 10px;
+        margin-bottom: 12px;
     }
     
     .number-btn {
