@@ -39,9 +39,15 @@
     </div>
 
     <div class="container">
+        <!-- バージョン表示（右上の隅） -->
+        <div class="version-badge">ver.<span id="app-version">-</span></div>
+
         <h1 id="app-title"><img class="title-logo" src="images/title-logo.png" alt="" draggable="false"> はろなぞ4<br><small>Bingo Card Support</small></h1>
 
         <main>
+            <!-- 保存できないときだけ出る警告（普段は非表示） -->
+            <div id="save-warning" class="save-warning" hidden></div>
+
             <!-- ビンゴカード管理（スタッフ専用） -->
             <section class="card-management staff-only">
                 <h2>⚙️ ビンゴカード管理</h2>
@@ -144,11 +150,6 @@
                 </div>
             </section>
 
-            <!-- アプリ情報（バージョン・最終保存時刻・保存エラー警告） -->
-            <section class="server-info">
-                <small>バージョン: <span id="app-version">-</span> | 最終保存: <span id="last-save">-</span></small>
-                <div id="save-warning" class="save-warning" hidden></div>
-            </section>
         </main>
     </div>
 

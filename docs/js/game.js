@@ -1149,7 +1149,7 @@ class LuckyBoxUI {
         });
     }
 
-    // ---- フッター（バージョン表示・最終保存時刻・保存エラー警告） ----
+    // ---- バージョン表示（右上）と保存エラー警告 ----
     setupFooter() {
         const versionEl = document.getElementById('app-version');
         if (versionEl && typeof APP_VERSION !== 'undefined') {
@@ -1162,18 +1162,7 @@ class LuckyBoxUI {
     }
 
     updateSaveStatus(status) {
-        const savedEl = document.getElementById('last-save');
         const warnEl = document.getElementById('save-warning');
-
-        if (savedEl) {
-            if (status.savedAt) {
-                const t = new Date(status.savedAt);
-                const pad = (n) => String(n).padStart(2, '0');
-                savedEl.textContent = `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
-            } else {
-                savedEl.textContent = '-';
-            }
-        }
 
         if (warnEl) {
             if (!status.storageAvailable) {

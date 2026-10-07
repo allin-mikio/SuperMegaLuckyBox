@@ -33,6 +33,7 @@ body::before {
 }
 
 .container {
+    position: relative; /* バージョン表示を右上の隅に置くための基準 */
     max-width: 1200px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
@@ -1109,13 +1110,24 @@ body #lightning-minus2.lightning-effect-btn.active {
     }
 }
 
-/* サーバー情報 */
-.server-info {
-    text-align: center;
-    font-size: 0.9rem;
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    border-radius: 10px;
+/* バージョン表示（コンテナの右上の隅） */
+.version-badge {
+    position: absolute;
+    /* 見た目の位置は従来どおり（top 8px / right 14px 相当）。
+       スタッフモードの長押し対象なので、指で押しやすいよう余白ぶんだけ押せる範囲を広げている */
+    top: 0;
+    right: 0;
+    padding: 8px 14px 14px 24px;
+    font-size: 0.8rem;
+    color: #777;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body.staff-mode .version-badge {
+    color: #FFECEC;
 }
 
 /* ハイライト機能 - 選択状態に応じたマイルドな強調表示 */
@@ -1430,10 +1442,6 @@ body.staff-mode h1 small {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-body.staff-mode .server-info {
-    color: #FFFFFF;
-    background: rgba(0, 0, 0, 0.25);
-}
 
 /* 機能ごと一時的に隠す（全モードで非表示）。復活させるときは HTML から feature-off を外す */
 .feature-off {
@@ -1446,8 +1454,9 @@ body.staff-mode .staff-only {
     outline-offset: 3px;
 }
 
-/* タイトルの長押し（スタッフモードへの入口）で、文字選択やメニューを出さない */
-#app-title {
+/* バージョン表示の長押し（スタッフモードへの入口）で、文字選択やメニューを出さない */
+#app-title,
+.version-badge {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;

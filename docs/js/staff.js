@@ -2,7 +2,7 @@
  * スタッフモード / ユーザーモードの切り替え
  *
  *  - 起動直後は必ずユーザーモード（スタッフモードの状態は保存しない）
- *  - スタッフモードへ入る: 画面上部のタイトルを約2秒長押し → 暗証番号を入力
+ *  - スタッフモードへ入る: 画面右上のバージョン表示（ver.x.xx.xx）を長押し → 暗証番号を入力
  *  - スタッフモードから戻る: ①帯の「ユーザーモードに戻る」ボタン（手動）
  *                            ②一定時間操作がなければ自動で戻る
  *  - スタッフ専用の部品は、HTML側で class="staff-only" を付けたもの
@@ -16,13 +16,14 @@
 
   // 暗証番号を変更する場合は、ここを書き換える（数字。桁数は自由。入力欄の桁数もこの長さに合わせる）
   const STAFF_PIN = '413';
-  // タイトルの長押し時間（ミリ秒）
+  // バージョン表示の長押し時間（ミリ秒）
   const LONG_PRESS_MS = 1000;
   // スタッフモードで無操作が続いたときに、自動でユーザーモードへ戻るまでの時間（ミリ秒）
   const config = { idleMs: 1 * 30 * 1000 };
 
   const body = document.body;
-  const title = document.getElementById('app-title');
+  // 長押しする場所（右上のバージョン表示）
+  const title = document.querySelector('.version-badge');
   const banner = document.getElementById('staff-banner');
   const countdown = document.getElementById('staff-countdown');
   const exitBtn = document.getElementById('staff-exit-btn');
@@ -168,7 +169,7 @@
 
   pinCancel.addEventListener('click', closePinDialog);
 
-  /* ---------------- タイトルの長押し ---------------- */
+  /* ---------------- バージョン表示の長押し ---------------- */
   let pressTimer = null;
   let pressStart = null;
 
