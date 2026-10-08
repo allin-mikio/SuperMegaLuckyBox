@@ -865,6 +865,12 @@ class LuckyBoxUI {
         return map;
     }
 
+    // カードIDが属するラウンド名（tutorial / round1 〜 round4）。タイトルの帯の色分けに使う
+    getCardRound(cardId) {
+        const byRound = (window.LUCKYBOX_CARDS && window.LUCKYBOX_CARDS.cardsByRound) || {};
+        return Object.keys(byRound).find((roundName) => (byRound[roundName] || []).includes(cardId)) || '';
+    }
+
     updateCardsDisplay() {
         const activeContainer = document.getElementById('cards-container');
         const completedContainer = document.getElementById('completed-cards-container');
@@ -1077,7 +1083,8 @@ class LuckyBoxUI {
                 let extraClass = '';
                 if (isGroupRepresentative) {
                     const span = getGroupSpan(groupIndex);
-                    cellStyle = `grid-row: ${span.rowStart} / span ${span.rowSpan}; grid-column: ${span.colStart} / span ${span.colSpan};`;
+                    // --span: 統合マスの大きさ（何マス分か）。中の文字は、これに比例して大きくする（card-look.css）
+                    cellStyle = `grid-row: ${span.rowStart} / span ${span.rowSpan}; grid-column: ${span.colStart} / span ${span.colSpan}; --span: ${Math.min(span.rowSpan, span.colSpan)};`;
                     const groupDisplay = getGroupDisplayValue(groupIndex);
                     if (groupDisplay !== null && groupDisplay !== undefined) {
                         displayNumber = groupDisplay;
@@ -1181,7 +1188,7 @@ class LuckyBoxUI {
             : '';
 
         return `
-            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
+            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-round="${this.getCardRound(card.card_id)}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">カード ${card.card_id}</div>
                 ${stickerToolsHtml}
                 <div class="card-content">
@@ -1330,20 +1337,22 @@ class LuckyBoxUI {
 
         Object.entries(tokenMap).forEach(([key, { icon, count }]) => {
             if (!count) return;
-            segments.push({ text: `${icon}${count > 1 ? count : ''}`, type: key });
+            segments.push({ text: icon, countText: count > 1 ? String(count) : '', type: key });
         });
 
         if (numbers.length) {
-            segments.push({ text: numbers.join(','), type: 'number' });
+            segments.push({ text: numbers.join(','), countText: '', type: 'number' });
         }
 
         others.forEach(({ icon, count }, key) => {
-            segments.push({ text: `${icon}${count > 1 ? `×${count}` : ''}`, type: key });
+            segments.push({ text: icon, countText: count > 1 ? `×${count}` : '', type: key });
         });
 
-        return segments.map(({ text, type }) => {
+        // 個数（2個以上のとき）は、アイコンとは別の小さな文字にする（見た目は card-look.css の .bonus-count）
+        return segments.map(({ text, countText, type }) => {
             const typeClass = type ? ` bonus-icon--${type}` : '';
-            return `<span class="bonus-icon${typeClass}">${text}</span>`;
+            const countHtml = countText ? `<span class="bonus-count">${countText}</span>` : '';
+            return `<span class="bonus-icon${typeClass}">${text}</span>${countHtml}`;
         }).join('');
     }
 

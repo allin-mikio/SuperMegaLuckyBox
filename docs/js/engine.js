@@ -26,9 +26,10 @@
   const STICKER_CONFIG = {
     cards: ['Last'],
     max: { 3: 1, 2: 4 },
-    teams: ['x', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'], // 先頭が初期値（チーム未選択）
+    teams: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), // 選択リストの並び順（A～Z）
+    defaultTeam: 'X', // チームを選んでいないときの初期値（リストの先頭でなくてよい）
   };
-  const DEFAULT_TEAM = STICKER_CONFIG.teams[0];
+  const DEFAULT_TEAM = STICKER_CONFIG.defaultTeam;
 
   /* ------------------------------------------------------------------ */
   /* BingoCard                                                           */

@@ -22,6 +22,13 @@
     letter-spacing: 0.08em !important;
 }
 
+/* ラウンドごとの帯の色（実物のカードと同じ）。ラウンドは cards.js の cardsByRound で決まる（data-round）*/
+.bingo-card[data-round="tutorial"] .card-header { background: #7030A0 !important; }
+.bingo-card[data-round="round1"] .card-header { background: #00B050 !important; }
+.bingo-card[data-round="round2"] .card-header { background: #40AFFF !important; }
+.bingo-card[data-round="round3"] .card-header { background: #FF6565 !important; }
+.bingo-card[data-round="round4"] .card-header { background: #7030A0 !important; }
+
 /* 盤面の枠（紫）とマス（ほぼ白） */
 .bingo-card .bingo-grid {
     background: #7030A0 !important;
@@ -53,6 +60,11 @@
 
 .bingo-card .cell-number {
     font-size: calc(var(--cell) * 0.5) !important;
+}
+
+/* 統合マス（シール）の文字は、実物のように、マスの大きさに合わせて大きくする（2x2 なら2倍、3x3 なら3倍ほど）*/
+.bingo-card .bingo-cell.merged-cell .cell-number {
+    font-size: calc(var(--cell) * 0.8 * var(--span, 1)) !important;
 }
 
 /* 黒く塗ったマスの数字は、いままでどおり明るい文字にする */
@@ -92,6 +104,14 @@
     height: calc(var(--cell) * 0.58) !important;
 }
 
+/* 個数（2個以上のときの数字）は、どのアイコンでも同じ小さな文字（色は、マスの文字色。使用済みは白） */
+.bingo-card .bonus-cell .bonus-count {
+    font-size: 1em !important;
+    font-weight: bold !important;
+    line-height: 1 !important;
+    margin-left: 2px !important;
+}
+
 /* 星・月のマスの色（実物: 星はピンク、月は水色）。まだ揃っていない（待機中）のときだけ。
    ※ 揃ったときの薄いピンク（タップで使用済みにするサイン）と似ているので、紛らわしければこの2つを消す */
 .bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--star) {
@@ -105,6 +125,68 @@
 /* 雷のマスは、実物のように薄い緑（雷だけのマスは揃うとすぐグレーになる） */
 .bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--lightning) {
     background: #C8F5DC !important;
+}
+
+/*
+ * 「揃った」（タップして現物を渡す／使う合図）マスは、色をゆっくり（3秒周期）濃く・薄くする。
+ *   星:     ピンク #FF9EC0 ⇔ 薄いピンク #FFECF2
+ *   月:     青     #8DB8EE ⇔ 薄い青     #E8F1FC
+ *   数字・？: 黄緑   #A5D66A ⇔ 薄い黄緑   #EDF6E1
+ *   （薄い側は、真っ白ではなく、元の色が2割だけ残る色）
+ * 背景色そのものは !important で固定されていて動かせないので、濃い色の膜（::before）の濃さを変えている。
+ * 動きを減らす設定（prefers-reduced-motion）の端末では、動かさず、中間の色で止める。
+ */
+.bingo-card .bonus-cell.available {
+    background: #EDF6E1 !important;
+}
+
+.bingo-card .bonus-cell.available.bonus-pink {
+    background: #FFECF2 !important;
+}
+
+.bingo-card .bonus-cell.available.bonus-pink:has(.bonus-icon--moon) {
+    background: #E8F1FC !important;
+    border-color: #4A74B8 !important;
+    box-shadow: 0 0 10px rgba(74, 116, 184, 0.55) !important;
+}
+
+.bingo-card .bonus-cell.available::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #A5D66A;
+    opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+    animation: bonus-pulse 3s ease-in-out infinite;
+}
+
+.bingo-card .bonus-cell.available.bonus-pink::before {
+    background: #FF9EC0;
+}
+
+.bingo-card .bonus-cell.available.bonus-pink:has(.bonus-icon--moon)::before {
+    background: #8DB8EE;
+}
+
+.bingo-card .bonus-cell.available > * {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes bonus-pulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bingo-card .bonus-cell.available::before {
+        animation: none;
+        opacity: 0.5;
+    }
 }
 
 /* 持っている雷（「Bingo Cards」見出しの右に並ぶボタン）も、カードの雷のマスに合わせる */
