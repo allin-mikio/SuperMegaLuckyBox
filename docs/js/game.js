@@ -1665,7 +1665,9 @@ class LuckyBoxUI {
         setText('score-black-count', activeBlackCells);
         setText('score-black-pts', activePoints);
         const boardPoints = scoreDetails.board_points ?? (completedPoints + activePoints);
-        setText('score-subtotal', boardPoints);
+        const tokenPoints = scoreDetails.bonus_points ?? 0;
+        setText('score-board-pts', boardPoints);
+        setText('score-token-pts', tokenPoints);
         setText('score-final', totalScore);
         setText('score-star-pts', `${(scoreDetails.star && scoreDetails.star.points) || 0}点`);
         setText('score-lightning-pts', `${(scoreDetails.lightning && scoreDetails.lightning.points) || 0}点`);
