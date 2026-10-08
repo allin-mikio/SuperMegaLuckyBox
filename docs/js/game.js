@@ -253,7 +253,7 @@ class LuckyBoxUI {
         if (this._lightningShown === count && tray.childElementCount) return;
         this._lightningShown = count;
 
-        const icons = '<button type="button" class="lightning-token" aria-label="雷を1つ使う">⚡</button>'.repeat(count);
+        const icons = `<button type="button" class="lightning-token" aria-label="雷を1つ使う">${this.getBonusIcon('lightning')}</button>`.repeat(count);
         const add = '<button type="button" class="lightning-add staff-only" aria-label="雷を1つ増やす">＋</button>';
         tray.innerHTML = icons + add;
     }
@@ -1283,9 +1283,11 @@ class LuckyBoxUI {
         if (!bonus) return '';
         
         switch (bonus) {
-            case 'lightning': return '⚡';
-            case 'moon': return '🌛';      // より明確な三日月
-            case 'star': return '★';       // より明確な星
+            // 雷は、実物のカードに寄せて、緑の稲妻を SVG で描く
+            case 'lightning': return '<svg viewBox="0 0 24 24" aria-label="雷" role="img"><defs><linearGradient id="bolt-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD19A"/><stop offset="1" stop-color="#2F8A44"/></linearGradient></defs><polygon points="14,1.5 4.5,13.5 10.5,13.5 8.5,22.5 19.5,9.5 13,9.5" fill="url(#bolt-green)" stroke="#2A6B3A" stroke-width="1" stroke-linejoin="round"/></svg>';
+            // 月・星は、実物のカードに寄せて SVG で描く（赤い星に黒いふち、青い三日月）。色は絵そのものに入っている
+            case 'moon': return '<svg viewBox="0 0 24 24" aria-label="月" role="img"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#6F9BE0" stroke="#3F68B0" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+            case 'star': return '<svg viewBox="0 0 24 24" aria-label="星" role="img"><polygon points="12,2.2 14.9,8.6 21.9,9.3 16.6,14 18.2,20.9 12,17.3 5.8,20.9 7.4,14 2.1,9.3 9.1,8.6" fill="#E8141C" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/></svg>';
             case 'wildcard': return '？';
             default:
                 // 数字ボーナス (number_X 形式)

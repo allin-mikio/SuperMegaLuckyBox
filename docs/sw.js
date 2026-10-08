@@ -16,6 +16,7 @@ const PRECACHE_URLS = [
   'manifest.webmanifest',
   'css/style.css',
   'css/bingo-bonus-fix.css',
+  'css/card-look.css',
   'js/version.js',
   'js/cards.js',
   'js/engine.js',

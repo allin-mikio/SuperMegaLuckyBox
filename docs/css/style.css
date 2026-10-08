@@ -661,6 +661,13 @@ body #lightning-minus2.lightning-effect-btn.active {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
+.lightning-token svg {
+    display: block;
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+}
+
 .lightning-token:active {
     transform: scale(0.92);
     background: #FFE680;

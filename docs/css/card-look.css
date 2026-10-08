@@ -1,0 +1,131 @@
+/*
+ * 実物のカードに見た目を寄せるための、見た目だけのスタイル（色・枠・数字・星・月）。
+ * 大きさ・配置・余白は変えていない（マスの大きさの計算は style.css の .bingo-board のまま）。
+ * 元の見た目に戻したいときは、index.html の card-look.css の読み込みを外せばよい。
+ *
+ *   実物の色: 台紙 #FFC000（黄色）／ 紫の枠 #7030A0 ／ タイトルの帯 #00B050（緑）／ 行ボーナス #FFE2A6（ベージュ）
+ */
+
+/* 台紙 */
+.bingo-card {
+    background: linear-gradient(135deg, #FFC81E 0%, #FFB400 100%) !important;
+    border: 3px solid #C98A00 !important;
+}
+
+/* タイトルの帯（実物は緑の帯に白い文字、黒い枠） */
+.bingo-card .card-header {
+    background: #00B050 !important;
+    color: #FFFFFF !important;
+    border: 3px solid #111111 !important;
+    border-radius: 4px !important;
+    text-shadow: none !important;
+    letter-spacing: 0.08em !important;
+}
+
+/* 盤面の枠（紫）とマス（ほぼ白） */
+.bingo-card .bingo-grid {
+    background: #7030A0 !important;
+}
+
+.bingo-card .bingo-cell:not(.marked) {
+    background: #FFFFF4 !important;
+    border-color: #7030A0 !important;
+}
+
+/*
+ * 数字: 実物のように、赤〜オレンジのグラデーションに、青いふち取り。
+ * （グラデーションを文字の形で切り抜き、まわりに青い影を重ねてふち取りにしている）
+ */
+.bingo-card .cell-number,
+.bingo-card .bonus-cell .bonus-icon--number,
+.bingo-card .bonus-cell .bonus-icon--wildcard {
+    background: linear-gradient(180deg, #E5281C 28%, #FF9F1A 72%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    font-weight: 900 !important;
+    filter:
+        drop-shadow(0.03em 0 0 #1B62B8)
+        drop-shadow(-0.03em 0 0 #1B62B8)
+        drop-shadow(0 0.03em 0 #1B62B8)
+        drop-shadow(0 -0.03em 0 #1B62B8) !important;
+}
+
+.bingo-card .cell-number {
+    font-size: calc(var(--cell) * 0.5) !important;
+}
+
+/* 黒く塗ったマスの数字は、いままでどおり明るい文字にする */
+.bingo-card .bingo-cell.marked .cell-number {
+    background: none !important;
+    -webkit-text-fill-color: #E0E0E0 !important;
+    filter: none !important;
+}
+
+/* ボーナスのマス: 実物のように、紫の枠にベージュ（行ボーナスの数字は大きめ）*/
+.bingo-card .row-bonus,
+.bingo-card .col-bonus {
+    border-width: 3px !important;
+    border-radius: 8px !important;
+}
+
+/* 待機中（揃う前）だけ。揃った（黄緑・ピンク）・使用済み（グレー）の色は、そのまま */
+.bingo-card .row-bonus:not(.available):not(.used),
+.bingo-card .col-bonus:not(.available):not(.used) {
+    background: #FFE2A6 !important;
+    border-color: #7030A0 !important;
+}
+
+.bingo-card .bonus-cell .bonus-icon--number {
+    font-size: 1.45em !important;
+}
+
+/* 「？」は数字より細く見えるので、少し大きくする */
+.bingo-card .bonus-cell .bonus-icon--wildcard {
+    font-size: 1.85em !important;
+}
+
+/* 星は、赤に黒いふち取り。月は、青い三日月（どちらも game.js が SVG で描く）*/
+.bingo-card .bonus-cell .bonus-icon svg {
+    display: block !important;
+    width: calc(var(--cell) * 0.58) !important;
+    height: calc(var(--cell) * 0.58) !important;
+}
+
+/* 星・月のマスの色（実物: 星はピンク、月は水色）。まだ揃っていない（待機中）のときだけ。
+   ※ 揃ったときの薄いピンク（タップで使用済みにするサイン）と似ているので、紛らわしければこの2つを消す */
+.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--star) {
+    background: #FFD3DC !important;
+}
+
+.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--moon) {
+    background: #C9DEF5 !important;
+}
+
+/* 雷のマスは、実物のように薄い緑（雷だけのマスは揃うとすぐグレーになる） */
+.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--lightning) {
+    background: #C8F5DC !important;
+}
+
+/* 持っている雷（「Bingo Cards」見出しの右に並ぶボタン）も、カードの雷のマスに合わせる */
+.lightning-token {
+    background: #C8F5DC !important;
+    border: 3px solid #7030A0 !important;
+    border-radius: 8px !important;
+}
+
+.lightning-token:active {
+    background: #A5E8C4 !important;
+}
+
+/* 使用済み（グレー）のときは、数字・？・星・月・雷をうすくする */
+.bingo-card .bonus-cell.used .bonus-icon svg {
+    opacity: 0.45 !important;
+}
+
+.bingo-card .bonus-cell.used .bonus-icon--number,
+.bingo-card .bonus-cell.used .bonus-icon--wildcard {
+    background: none !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    filter: none !important;
+}
