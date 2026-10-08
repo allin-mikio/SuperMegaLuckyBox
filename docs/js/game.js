@@ -9,6 +9,7 @@ class LuckyBoxUI {
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
         this.setupTeamSelect();
+        this.setupScoreInputs();
         // スタッフモードを終えたら、シール編集も終える
         document.addEventListener('staffmodechange', (event) => {
             if (!event.detail.on && this.stickerEdit) {
@@ -602,6 +603,65 @@ class LuckyBoxUI {
     syncTeamSelect() {
         const select = document.getElementById('team-select');
         if (select) select.value = window.LuckyBoxEngine.getApi().getTeam();
+    }
+
+    /* ---------------- 得点欄のスタッフ入力（星・雷・月） ---------------- */
+    setupScoreInputs() {
+        const starIcon = document.getElementById('score-star-icon');
+        const lightningIcon = document.getElementById('score-lightning-icon');
+        const moonIcon = document.getElementById('score-moon-icon');
+        if (starIcon) starIcon.innerHTML = this.getBonusIcon('star');
+        if (lightningIcon) lightningIcon.innerHTML = this.getBonusIcon('lightning');
+        if (moonIcon) moonIcon.innerHTML = this.getBonusIcon('moon');
+
+        ['score-star-count', 'score-lightning-count', 'score-moon-count'].forEach((id) => {
+            const select = document.getElementById(id);
+            if (!select || select.options.length) return;
+            for (let n = 0; n <= 99; n++) {
+                const option = document.createElement('option');
+                option.value = String(n);
+                option.textContent = String(n);
+                select.appendChild(option);
+            }
+        });
+
+        const save = async () => {
+            const result = await this.apiCall('set_score_inputs', {
+                star: Number(document.getElementById('score-star-count').value),
+                lightning: Number(document.getElementById('score-lightning-count').value),
+                moon: Number(document.getElementById('score-moon-count').value),
+                star_ex: document.getElementById('score-star-ex').checked,
+                lightning_ex: document.getElementById('score-lightning-ex').checked,
+            });
+            if (result && result.game_state) this.gameState = result.game_state;
+            this.updateDisplay();
+        };
+
+        ['score-star-count', 'score-lightning-count', 'score-moon-count', 'score-star-ex', 'score-lightning-ex']
+            .forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', save);
+            });
+    }
+
+    syncScoreInputs() {
+        const details = (this.gameState && this.gameState.score_details) || {};
+        const star = details.star || {};
+        const lightning = details.lightning || {};
+        const moon = details.moon || {};
+        const setVal = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = String(value);
+        };
+        const setCheck = (id, on) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = !!on;
+        };
+        setVal('score-star-count', star.count || 0);
+        setVal('score-lightning-count', lightning.count || 0);
+        setVal('score-moon-count', moon.count || 0);
+        setCheck('score-star-ex', star.ex);
+        setCheck('score-lightning-ex', lightning.ex);
     }
 
     /* ---------------- シール編集（ラウンド4の Last） ---------------- */
@@ -1588,8 +1648,28 @@ class LuckyBoxUI {
         }
 
         if (scoreDetailElement) {
-            scoreDetailElement.textContent = `コンプリート：${completedPoints}, 黒マス：${activeBlackCells} = ${totalScore} (+月ボーナス+星ボーナス)`;
+            scoreDetailElement.textContent = `コンプリート：${completedPoints}, 黒マス：${activeBlackCells} = ${totalScore}`;
         }
+
+        const complete = scoreDetails.complete || {};
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        setText('score-c3-count', (complete[3] && complete[3].count) || 0);
+        setText('score-c3-pts', (complete[3] && complete[3].points) || 0);
+        setText('score-c4-count', (complete[4] && complete[4].count) || 0);
+        setText('score-c4-pts', (complete[4] && complete[4].points) || 0);
+        setText('score-c5-count', (complete[5] && complete[5].count) || 0);
+        setText('score-c5-pts', (complete[5] && complete[5].points) || 0);
+        setText('score-black-count', activeBlackCells);
+        setText('score-black-pts', activePoints);
+        const boardPoints = scoreDetails.board_points ?? (completedPoints + activePoints);
+        setText('score-subtotal', boardPoints);
+        setText('score-final', totalScore);
+        setText('score-star-pts', `${(scoreDetails.star && scoreDetails.star.points) || 0}点`);
+        setText('score-lightning-pts', `${(scoreDetails.lightning && scoreDetails.lightning.points) || 0}点`);
+        this.syncScoreInputs();
 
         // トークン表示を更新
         const updateTokenDisplay = (type) => {

@@ -152,6 +152,78 @@
                 </div>
             </section>
 
+            <!-- 得点（スタッフモードのみ。コンプリートカードと操作履歴のあいだ） -->
+            <section class="score-sheet staff-only">
+                <h2>🧮 得点</h2>
+                <div class="score-sheet-body">
+                    <div class="score-sheet-label" aria-hidden="true">
+                        <span>コンプリート</span>
+                        <span>×</span>
+                    </div>
+                    <table class="score-sheet-table">
+                        <tbody>
+                            <tr>
+                                <td>3×3</td>
+                                <td>10点</td>
+                                <td>×</td>
+                                <td id="score-c3-count" class="score-readout">0</td>
+                                <td>=</td>
+                                <td id="score-c3-pts" class="score-readout">0</td>
+                            </tr>
+                            <tr>
+                                <td>4×4</td>
+                                <td>30点</td>
+                                <td>×</td>
+                                <td id="score-c4-count" class="score-readout">0</td>
+                                <td>=</td>
+                                <td id="score-c4-pts" class="score-readout">0</td>
+                            </tr>
+                            <tr>
+                                <td>5×5</td>
+                                <td>100点</td>
+                                <td>×</td>
+                                <td id="score-c5-count" class="score-readout">0</td>
+                                <td>=</td>
+                                <td id="score-c5-pts" class="score-readout">0</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">黒マス 0.5点</td>
+                                <td>×</td>
+                                <td id="score-black-count" class="score-readout">0</td>
+                                <td>=</td>
+                                <td id="score-black-pts" class="score-readout">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="score-sheet-total">
+                        <div class="score-sheet-sum">合計 <span id="score-subtotal" class="score-readout">0</span></div>
+                        <div class="score-sheet-final">最終得点 <span id="score-final" class="score-readout">0</span> 点</div>
+                    </div>
+                    <div class="score-ex">
+                        <div class="score-ex-row">
+                            <span class="score-ex-mark" id="score-star-icon"></span>
+                            <label class="score-ex-check"><input type="checkbox" id="score-star-ex"> Ex</label>
+                            <select id="score-star-count" class="score-sheet-input" aria-label="星の個数"></select>
+                            <span>個…</span>
+                            <span id="score-star-pts" class="score-readout">0点</span>
+                        </div>
+                        <div class="score-ex-row">
+                            <span class="score-ex-mark" id="score-lightning-icon"></span>
+                            <label class="score-ex-check"><input type="checkbox" id="score-lightning-ex"> Ex</label>
+                            <select id="score-lightning-count" class="score-sheet-input" aria-label="雷の個数"></select>
+                            <span>個…</span>
+                            <span id="score-lightning-pts" class="score-readout">0点</span>
+                        </div>
+                        <div class="score-ex-row">
+                            <span class="score-ex-mark" id="score-moon-icon"></span>
+                            <select id="score-moon-count" class="score-sheet-input" aria-label="月の個数"></select>
+                            <span>個</span>
+                            <span class="score-readout-note">(集計外)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- 履歴表示セクション（スタッフモードのみ。いちばん下） -->
             <section class="history-display staff-only">
                 <h2>📜 操作履歴</h2>

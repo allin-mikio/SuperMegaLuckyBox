@@ -1375,6 +1375,184 @@ body.staff-mode .version-badge {
 }
 
 /* 履歴表示セクション */
+/* 得点（スタッフモードのみ。コンプリートカードと操作履歴のあいだ） */
+.score-sheet {
+    background: linear-gradient(135deg, #F4FFF0 0%, #D8F0C8 100%);
+    border: 2px solid #7CB342;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.score-sheet h2 {
+    font-size: 1.2rem;
+    margin: 0 0 10px;
+    color: #33691E;
+}
+
+.score-sheet-body {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: 10px 14px;
+    align-items: start;
+    justify-items: start;
+}
+
+.score-sheet-label {
+    display: grid;
+    grid-template-rows: 3fr 1fr;
+    width: 2.2em;
+    background: #BDBDBD;
+    color: #333;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 0.78rem;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+}
+
+.score-sheet-label span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.score-sheet-label span:last-child {
+    border-bottom: none;
+    font-size: 1.1rem;
+}
+
+.score-sheet-table {
+    width: auto;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    font-weight: bold;
+}
+
+.score-sheet-table td {
+    padding: 4px 8px 4px 0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.score-readout {
+    min-width: 2.2em;
+    font-variant-numeric: tabular-nums;
+}
+
+.score-readout-note {
+    color: #666;
+    font-size: 0.85em;
+    font-weight: normal;
+}
+
+.score-sheet-total {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    justify-self: end;
+    gap: 8px;
+    min-width: 8.5em;
+}
+
+.score-sheet-sum,
+.score-sheet-final {
+    padding: 8px 4px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.score-sheet-final {
+    font-size: 1.2rem;
+    color: #1B5E20;
+}
+
+.score-sheet-final span,
+.score-sheet-sum span {
+    margin: 0 4px;
+}
+
+.score-ex {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.score-ex-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.score-ex-mark {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 2px solid #7030A0;
+}
+
+.score-ex-mark svg {
+    width: 22px;
+    height: 22px;
+}
+
+#score-star-icon { background: #FFD3DC; }
+#score-lightning-icon { background: #C8F5DC; }
+#score-moon-icon { background: #C9DEF5; }
+
+.score-ex-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.score-sheet-input,
+.score-ex-check input[type="checkbox"] {
+    accent-color: #4B0082;
+    width: 22px;
+    height: 22px;
+}
+
+select.score-sheet-input {
+    width: 4.2em;
+    height: 36px;
+    padding: 4px 6px;
+    border: 2px solid #4B0082;
+    border-radius: 8px;
+    background: #fff;
+    color: #4B0082;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+    .score-sheet-body {
+        grid-template-columns: auto 1fr;
+    }
+
+    .score-sheet-total {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .score-ex {
+        align-items: flex-start;
+    }
+}
+
 .history-display {
     background: #f8f9fa;
     border: 1px solid #e0e0e0;
@@ -1613,8 +1791,13 @@ body.staff-mode .container {
     border-width: 6px;
 }
 
-body.staff-mode section:not(.card-management) {
+body.staff-mode section:not(.card-management):not(.completed-cards):not(.score-sheet) {
     background: linear-gradient(135deg, #FFF1F1 0%, #FFD9D9 100%);
+}
+
+body.staff-mode section.score-sheet {
+    background: linear-gradient(135deg, #F4FFF0 0%, #D8F0C8 100%);
+    border-color: #7CB342;
 }
 
 /* コンプリートカードの欄。カードの黄色に埋もれないよう、色相をずらした薄いアプリコット（スタッフモードでも同じ） */

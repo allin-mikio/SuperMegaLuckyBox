@@ -851,52 +851,61 @@ class LuckyBoxGame:
         self.update_score()
         return True
 
+    def card_board_size(self, card):
+        size = getattr(card, 'size', 3)
+        if isinstance(size, (list, tuple)) and size:
+            return int(size[0])
+        return int(size)
+
     def count_black_cells(self):
-        """未コンプリートカードの黒塗りマス数をカウント（統合マスは1マス換算）"""
+        """未コンプリートカードの黒塗りマス数。結合マスは実際のマス数で数える（2x2 なら 4）"""
         total = 0
         for card in self.cards:
             if card.is_complete():
                 continue
-
-            counted_groups = set()
-            merged_groups = getattr(card, 'merged_groups_info', [])
-            group_marked = getattr(card, 'group_marked', [])
-
-            for idx, group in enumerate(merged_groups):
-                if idx < len(group_marked) and group_marked[idx]:
-                    counted_groups.add(idx)
-                    total += 1
-
-            rows = len(card.marked)
-            for row_index in range(rows):
-                row_marks = card.marked[row_index]
-                for col_index, is_marked in enumerate(row_marks):
-                    if not is_marked:
-                        continue
-
-                    group_index = card.cell_to_group.get((row_index, col_index))
-                    if group_index is not None:
-                        if group_index in counted_groups:
-                            continue
-                        counted_groups.add(group_index)
+            for row_marks in card.marked:
+                for is_marked in row_marks:
+                    if is_marked:
                         total += 1
-                    else:
-                        total += 1
-
         return total
 
     def update_score(self):
-        """現在のカード状態からスコアと詳細を再計算"""
-        completed_points = len(self.completed_cards) * 10
+        """現在のカード状態からスコアと詳細を再計算。
+        コンプリートはサイズごと（3x3=10, 4x4=30, 5x5=100）。未コンプリートは黒マス2つで1点（切り捨て）。
+        """
+        unit = {3: 10, 4: 30, 5: 100}
+        counts = {3: 0, 4: 0, 5: 0}
+        seen = set()
+        for card in list(self.cards) + list(self.completed_cards):
+            if not card or card.card_id in seen:
+                continue
+            if not card.is_complete():
+                continue
+            seen.add(card.card_id)
+            n = self.card_board_size(card)
+            if n in counts:
+                counts[n] += 1
+        row = {k: counts[k] * unit[k] for k in counts}
+        completed_points = sum(row.values())
         active_black_cells = self.count_black_cells()
         active_points = active_black_cells // 2
-        total = completed_points + active_points
+        board_points = completed_points + active_points
+        total = board_points
 
         self.score = total
         self.score_details = {
+            'complete': {
+                '3': {'count': counts[3], 'unit': unit[3], 'points': row[3]},
+                '4': {'count': counts[4], 'unit': unit[4], 'points': row[4]},
+                '5': {'count': counts[5], 'unit': unit[5], 'points': row[5]},
+            },
             'completed_points': completed_points,
             'active_black_cells': active_black_cells,
             'active_points': active_points,
+            'board_points': board_points,
+            'star': {'count': 0, 'ex': False, 'points': 0},
+            'lightning': {'count': 0, 'ex': False, 'points': 0},
+            'moon': {'count': 0},
             'bonus_points': 0,
             'total': total
         }

@@ -31,6 +31,30 @@
   };
   const DEFAULT_TEAM = STICKER_CONFIG.defaultTeam;
 
+  const defaultScoreInputs = () => ({
+    star: 0,
+    lightning: 0,
+    moon: 0,
+    star_ex: false,
+    lightning_ex: false,
+  });
+
+  const clampScoreCount = (n) => {
+    const v = Number(n);
+    if (!Number.isInteger(v)) return 0;
+    return Math.max(0, Math.min(99, v));
+  };
+
+  // 星: EXなしは 1→1, 2→4, 3個以上→9。EXありは 1→1, 2→4, 3→9, 4個以上は個数×4
+  const starPoints = (count, ex) => {
+    if (count <= 0) return 0;
+    if (ex) return count <= 3 ? count * count : count * 4;
+    return count <= 2 ? count * count : 9;
+  };
+
+  // 雷: EXありのときだけ 1個1点。EXなしは 0点
+  const lightningPoints = (count, ex) => (ex ? count : 0);
+
   /* ------------------------------------------------------------------ */
   /* BingoCard                                                           */
   /* ------------------------------------------------------------------ */
@@ -276,6 +300,8 @@
       // 画面でタップして「使用済み（グレー）」にしたボーナス欄のキー（例: "G11:row:0"）。
       // 操作履歴の各スナップショットにも含めるので、Undo すると、そのときの使用状態に戻る。
       this.bonus_states = [];
+      // 得点欄のスタッフ入力（星・雷・月の個数と EX）。Undo では戻さない
+      this.score_inputs = defaultScoreInputs();
       // このタブレットのチーム（シールに表示する文字）。スタッフモードで選ぶ
       this.team = DEFAULT_TEAM;
       this.history = [];
@@ -390,7 +416,7 @@
 
     // 全マスが埋まったカードを、カレントのプール（this.cards）から外して、コンプリートのプールへ移す。
     // 全マスが埋まった時点で、すでに completed_cards には入っている（markCell）ので、
-    // ここでは「カレントから消す」のが主な仕事。得点（コンプリート×10点）は変わらない。
+    // ここでは「カレントから消す」のが主な仕事。得点は全マスが埋まった時点で付いているので、ボタンでは変わらない。
     completeCard(cardIndex) {
       if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= this.cards.length) return false;
       const card = this.cards[cardIndex];
@@ -570,50 +596,90 @@
     }
 
     /* ---- スコア ---- */
+    // 盤面の一辺（3 / 4 / 5）。コンプリート点はサイズで変わる
+    cardBoardSize(card) {
+      if (Array.isArray(card.size) && card.size.length) return Number(card.size[0]);
+      return parseInt(card.size, 10) || 0;
+    }
+
+    // 未コンプリートのカードの黒マス数。結合マスは、見た目のマス数ではなく実際のマス数で数える（2x2 なら 4）
     countBlackCells() {
       let total = 0;
       for (const card of this.cards) {
         if (card.isComplete()) continue;
-
-        const countedGroups = new Set();
-        card.merged_groups_info.forEach((group, idx) => {
-          if (idx < card.group_marked.length && card.group_marked[idx]) {
-            countedGroups.add(idx);
-            total += 1;
+        for (const rowMarks of card.marked) {
+          for (const isMarked of rowMarks) {
+            if (isMarked) total += 1;
           }
-        });
-
-        card.marked.forEach((rowMarks, rowIndex) => {
-          rowMarks.forEach((isMarked, colIndex) => {
-            if (!isMarked) return;
-            const groupIndex = card.cell_to_group.get(cellKey(rowIndex, colIndex));
-            if (groupIndex !== undefined) {
-              if (countedGroups.has(groupIndex)) return;
-              countedGroups.add(groupIndex);
-              total += 1;
-            } else {
-              total += 1;
-            }
-          });
-        });
+        }
       }
       return total;
     }
 
     updateScore() {
-      const completedPoints = this.completed_cards.length * 10;
+      const unit = { 3: 10, 4: 30, 5: 100 };
+      const counts = { 3: 0, 4: 0, 5: 0 };
+      const seen = new Set();
+      const addComplete = (card) => {
+        if (!card || seen.has(card.card_id) || !card.isComplete()) return;
+        seen.add(card.card_id);
+        const size = this.cardBoardSize(card);
+        if (Object.prototype.hasOwnProperty.call(counts, size)) counts[size] += 1;
+      };
+      this.cards.forEach(addComplete);
+      this.completed_cards.forEach(addComplete);
+
+      const row = {
+        3: counts[3] * unit[3],
+        4: counts[4] * unit[4],
+        5: counts[5] * unit[5],
+      };
+      const completedPoints = row[3] + row[4] + row[5];
       const activeBlackCells = this.countBlackCells();
       const activePoints = Math.floor(activeBlackCells / 2);
-      const total = completedPoints + activePoints;
+      const boardPoints = completedPoints + activePoints;
+
+      const inputs = this.score_inputs || defaultScoreInputs();
+      const star = clampScoreCount(inputs.star);
+      const lightning = clampScoreCount(inputs.lightning);
+      const moon = clampScoreCount(inputs.moon);
+      const starEx = !!inputs.star_ex;
+      const lightningEx = !!inputs.lightning_ex;
+      const starPts = starPoints(star, starEx);
+      const lightningPts = lightningPoints(lightning, lightningEx);
+      const bonusPoints = starPts + lightningPts;
+      const total = boardPoints + bonusPoints;
 
       this.score = total;
       this.score_details = {
+        complete: {
+          3: { count: counts[3], unit: unit[3], points: row[3] },
+          4: { count: counts[4], unit: unit[4], points: row[4] },
+          5: { count: counts[5], unit: unit[5], points: row[5] },
+        },
         completed_points: completedPoints,
         active_black_cells: activeBlackCells,
         active_points: activePoints,
-        bonus_points: 0,
-        total: total,
+        board_points: boardPoints,
+        star: { count: star, ex: starEx, points: starPts },
+        lightning: { count: lightning, ex: lightningEx, points: lightningPts },
+        moon: { count: moon },
+        bonus_points: bonusPoints,
+        total,
       };
+    }
+
+    // 得点欄のスタッフ入力。Undo の対象外（保存は LocalApi が行う）
+    setScoreInputs(data) {
+      const next = Object.assign(defaultScoreInputs(), this.score_inputs);
+      if (data && data.star != null) next.star = clampScoreCount(data.star);
+      if (data && data.lightning != null) next.lightning = clampScoreCount(data.lightning);
+      if (data && data.moon != null) next.moon = clampScoreCount(data.moon);
+      if (data && data.star_ex != null) next.star_ex = !!data.star_ex;
+      if (data && data.lightning_ex != null) next.lightning_ex = !!data.lightning_ex;
+      this.score_inputs = next;
+      this.updateScore();
+      return null;
     }
 
     /* ---- 履歴 / Undo ---- */
@@ -629,6 +695,7 @@
         round_num: this.round_num,
         bonus_states: this.bonus_states.slice(),
         team: this.team,
+        score_inputs: Object.assign(defaultScoreInputs(), this.score_inputs),
         action: actionDescription,
         timestamp: new Date().toISOString(),
       };
@@ -716,6 +783,7 @@
       this.score_details = { completed_points: 0, active_black_cells: 0, active_points: 0, total: 0 };
       this.round_num = 1;
       this.bonus_states = [];
+      this.score_inputs = defaultScoreInputs();
       this.history = [];
       this.updateScore();
       return true;
@@ -800,6 +868,7 @@
         }
         // チームは、Undo やオールリセットの影響を受けない設定なので、保存データから直接戻す
         if (STICKER_CONFIG.teams.includes(payload.current.team)) this.team = payload.current.team;
+        if (payload.current.score_inputs) this.setScoreInputs(payload.current.score_inputs);
         this.restoreState(payload.current);
         this.history = clone(payload.history);
         return true;
@@ -904,7 +973,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers', 'set_team']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers', 'set_team', 'set_score_inputs']);
 
   function defaultStorage() {
     try {
@@ -1026,6 +1095,11 @@
         }
         const success = game.markCell(d.card_index, d.row, d.col);
         return { success, game_state: game.getGameState() };
+      }
+
+      if (endpoint === 'set_score_inputs') {
+        game.setScoreInputs(data || {});
+        return { success: true, game_state: game.getGameState() };
       }
 
       if (endpoint === 'set_team') {
