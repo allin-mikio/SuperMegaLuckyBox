@@ -105,15 +105,23 @@
 }
 
 /* 個数（2個以上のときの数字）は、どのアイコンでも同じ小さな文字（色は、マスの文字色。使用済みは白） */
+.bingo-card .bonus-cell .bonus-icon {
+    margin: 0 !important; /* アイコンと個数のあいだを詰める（右端に個数が寄らないように） */
+}
+
 .bingo-card .bonus-cell .bonus-count {
     font-size: 1em !important;
     font-weight: bold !important;
     line-height: 1 !important;
-    margin-left: 2px !important;
+    margin-left: 0 !important;
 }
 
-/* 星・月のマスの色（実物: 星はピンク、月は水色）。まだ揃っていない（待機中）のときだけ。
-   ※ 揃ったときの薄いピンク（タップで使用済みにするサイン）と似ているので、紛らわしければこの2つを消す */
+/* 星・月・雷の SVG は、絵の右に空きがあるので、個数をほんの少し左へ寄せる（重ねない程度） */
+.bingo-card .bonus-cell:has(svg) .bonus-count {
+    margin-left: -2px !important;
+}
+
+/* 星・月のマスの色（実物: 星はピンク、月は水色）。まだ揃っていない（待機中）のときだけ。 */
 .bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--star) {
     background: #FFD3DC !important;
 }
@@ -128,29 +136,39 @@
 }
 
 /*
- * 「揃った」（タップして現物を渡す／使う合図）マスは、色をゆっくり（3秒周期）濃く・薄くする。
- *   星:     ピンク #FF9EC0 ⇔ 薄いピンク #FFECF2
- *   月:     青     #8DB8EE ⇔ 薄い青     #E8F1FC
- *   数字・？: 黄緑   #A5D66A ⇔ 薄い黄緑   #EDF6E1
- *   （薄い側は、真っ白ではなく、元の色が2割だけ残る色）
- * 背景色そのものは !important で固定されていて動かせないので、濃い色の膜（::before）の濃さを変えている。
+ * 「揃った」マスの合図
+ *   星・月: 固定の紫（#C084FC）。待機中の星（ピンク）・月（青）と区別し、台紙の黄色にも埋もれない色。
+ *           黄色も候補だったが、台紙と同系なので使っていない。
+ *   数字・？: 黄緑を、ゆっくり（3秒周期）濃く・薄くする（#A5D66A ⇔ #EDF6E1。薄い側は元の色が2割）
+ * 脈動の時計はページ（html）側。マスを描き直しても周期はリセットされない。
  * 動きを減らす設定（prefers-reduced-motion）の端末では、動かさず、中間の色で止める。
  */
-.bingo-card .bonus-cell.available {
+@property --bonus-pulse {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+}
+
+html {
+    animation: bonus-pulse-clock 3s ease-in-out infinite;
+}
+
+@keyframes bonus-pulse-clock {
+    0%, 100% { --bonus-pulse: 0; }
+    50% { --bonus-pulse: 1; }
+}
+
+.bingo-card .bonus-cell.available:not(.bonus-pink) {
     background: #EDF6E1 !important;
 }
 
 .bingo-card .bonus-cell.available.bonus-pink {
-    background: #FFECF2 !important;
+    background: #C084FC !important;
+    border-color: #7C3AED !important;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.55) !important;
 }
 
-.bingo-card .bonus-cell.available.bonus-pink:has(.bonus-icon--moon) {
-    background: #E8F1FC !important;
-    border-color: #4A74B8 !important;
-    box-shadow: 0 0 10px rgba(74, 116, 184, 0.55) !important;
-}
-
-.bingo-card .bonus-cell.available::before {
+.bingo-card .bonus-cell.available:not(.bonus-pink)::before {
     content: '';
     position: absolute;
     top: 0;
@@ -158,34 +176,20 @@
     right: 0;
     bottom: 0;
     background: #A5D66A;
-    opacity: 0;
+    opacity: var(--bonus-pulse);
     z-index: 0;
     pointer-events: none;
-    animation: bonus-pulse 3s ease-in-out infinite;
 }
 
-.bingo-card .bonus-cell.available.bonus-pink::before {
-    background: #FF9EC0;
-}
-
-.bingo-card .bonus-cell.available.bonus-pink:has(.bonus-icon--moon)::before {
-    background: #8DB8EE;
-}
-
-.bingo-card .bonus-cell.available > * {
+.bingo-card .bonus-cell.available:not(.bonus-pink) > * {
     position: relative;
     z-index: 1;
 }
 
-@keyframes bonus-pulse {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .bingo-card .bonus-cell.available::before {
+    html {
         animation: none;
-        opacity: 0.5;
+        --bonus-pulse: 0.5;
     }
 }
 

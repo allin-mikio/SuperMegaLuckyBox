@@ -1617,11 +1617,11 @@ body.staff-mode section:not(.card-management) {
     background: linear-gradient(135deg, #FFF1F1 0%, #FFD9D9 100%);
 }
 
-/* コンプリートカードの欄は、カレント（Bingo Cards）と見分けやすいよう、薄い水色にする（スタッフモードでも同じ） */
+/* コンプリートカードの欄。カードの黄色に埋もれないよう、色相をずらした薄いアプリコット（スタッフモードでも同じ） */
 section.completed-cards,
 body.staff-mode section.completed-cards {
-    background: linear-gradient(135deg, #EEF8FF 0%, #CFE9FB 100%);
-    border-color: #8FC4E8;
+    background: linear-gradient(135deg, #FFE8D2 0%, #F0C49A 100%);
+    border-color: #E09A62;
 }
 
 /* 赤い地色の上でも読めるように、タイトルとフッターは白文字にする */
