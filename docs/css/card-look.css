@@ -74,17 +74,17 @@
     filter: none !important;
 }
 
-/* ボーナスのマス: 実物のように、紫の枠にベージュ（行ボーナスの数字は大きめ）*/
+/* ボーナスのマス: 紫の枠。数字・？の待機中は盤面と同じ白 */
 .bingo-card .row-bonus,
 .bingo-card .col-bonus {
     border-width: 3px !important;
     border-radius: 8px !important;
 }
 
-/* 待機中（揃う前）だけ。揃った（黄緑・ピンク）・使用済み（グレー）の色は、そのまま */
+/* 待機中（揃う前）の数字・？。星・月・雷は下のルールで上書きする */
 .bingo-card .row-bonus:not(.available):not(.used),
 .bingo-card .col-bonus:not(.available):not(.used) {
-    background: #FFE2A6 !important;
+    background: #FFFFF4 !important;
     border-color: #7030A0 !important;
 }
 
@@ -136,10 +136,9 @@
 }
 
 /*
- * 「揃った」マスの合図
- *   星・月: 固定の紫（#C084FC）。待機中の星（ピンク）・月（青）と区別し、台紙の黄色にも埋もれない色。
- *           黄色も候補だったが、台紙と同系なので使っていない。
- *   数字・？: 黄緑を、ゆっくり（3秒周期）濃く・薄くする（#A5D66A ⇔ #EDF6E1。薄い側は元の色が2割）
+ * 「揃った」マスの合図（すぐ処理するか、ラウンド終わりまで待つか）
+ *   数字・？: すぐ処理 → 薄いレモン色～薄い赤の脈動（#F8FB8C ⇔ #F0706C）、2.4秒周期
+ *   星・月:   ラウンド終わり → 薄いレモン色の固定（#F8FB8C）。動かさない
  * 脈動の時計はページ（html）側。マスを描き直しても周期はリセットされない。
  * 動きを減らす設定（prefers-reduced-motion）の端末では、動かさず、中間の色で止める。
  */
@@ -150,7 +149,7 @@
 }
 
 html {
-    animation: bonus-pulse-clock 3s ease-in-out infinite;
+    animation: bonus-pulse-clock 2.4s ease-in-out infinite;
 }
 
 @keyframes bonus-pulse-clock {
@@ -159,13 +158,15 @@ html {
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink) {
-    background: #EDF6E1 !important;
+    background: #F8FB8C !important;
+    border-color: #E05550 !important;
+    box-shadow: 0 0 10px rgba(240, 112, 108, 0.45) !important;
 }
 
 .bingo-card .bonus-cell.available.bonus-pink {
-    background: #C084FC !important;
-    border-color: #7C3AED !important;
-    box-shadow: 0 0 10px rgba(124, 58, 237, 0.55) !important;
+    background: #F8FB8C !important;
+    border-color: #D4D84A !important;
+    box-shadow: none !important;
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink)::before {
@@ -175,7 +176,7 @@ html {
     left: 0;
     right: 0;
     bottom: 0;
-    background: #A5D66A;
+    background: #F0706C;
     opacity: var(--bonus-pulse);
     z-index: 0;
     pointer-events: none;
