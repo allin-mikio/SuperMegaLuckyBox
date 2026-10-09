@@ -1,0 +1,57 @@
+/*
+ * Fire HD など弱い端末向けの軽量化（実験用・work/lightWeight）
+ *
+ * 戻し方: index.html / sw.js からこのファイルの参照を外すだけで、見た目は元に戻る。
+ * 目的: 多重 drop-shadow・常時脈動・ぼかし影を止め、タップ後の描画負荷を下げる。
+ */
+
+/* 数字のグラデーション＋4重 drop-shadow は GPU に重い → 単色にする */
+.bingo-card .cell-number,
+.bingo-card .bonus-cell .bonus-icon--number,
+.bingo-card .bonus-cell .bonus-icon--wildcard {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    -webkit-text-fill-color: #E5281C !important;
+    color: #E5281C !important;
+    filter: none !important;
+}
+
+.bingo-card .bingo-cell.marked .cell-number {
+    -webkit-text-fill-color: #E0E0E0 !important;
+    color: #E0E0E0 !important;
+}
+
+/* html 全体の @property 脈動を止める（常時レイアウト再計算の原因になりやすい） */
+html {
+    animation: none !important;
+    --bonus-pulse: 0.7;
+}
+
+.bingo-card .bonus-cell.available:not(.bonus-pink)::before {
+    display: none !important;
+}
+
+/* すぐ処理する数値・？は、動かさず「薄い赤」で固定（動く＝負荷） */
+.bingo-card .bonus-cell.available:not(.bonus-pink) {
+    background: #F0706C !important;
+    border-color: #E05550 !important;
+    box-shadow: none !important;
+}
+
+.bingo-card .bonus-cell.available.bonus-pink {
+    box-shadow: none !important;
+}
+
+/* その他の軽い影も切る */
+.bingo-card,
+.bingo-card .bingo-cell,
+.complete-btn {
+    box-shadow: none !important;
+}
+
+.bingo-card .bingo-cell,
+.bingo-card .bonus-cell,
+.btn {
+    transition: none !important;
+}

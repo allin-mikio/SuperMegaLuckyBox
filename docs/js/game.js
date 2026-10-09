@@ -863,12 +863,14 @@ class LuckyBoxUI {
 
         // 既に処理中の場合は何もしない
         if (this.isMarkingCell) {
-            console.log('既にセルマーク処理中です');
             return;
         }
         
         this.isMarkingCell = true;
-        console.log(`セルマーク処理開始: カード${cardIndex}, 行${row}, 列${col}`);
+
+        // 弱い端末向け: エンジン処理の前に黒塗りを見せて、タップ感を先に返す
+        this.paintCellOptimistic(cardIndex, row, col);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
         
         try {
             const result = await this.apiCall('mark_cell', {
@@ -878,16 +880,17 @@ class LuckyBoxUI {
             });
             
             if (result && result.success === true) {
-                console.log('セルマーク成功');
                 this.gameState = result.game_state;
-                this.updateDisplay();
+                this.updateAfterMark(cardIndex);
             } else {
-                console.error('セルマーク失敗:', result);
+                // 楽観更新を取り消すため、盤面を正式状態で描き直す
+                this.updateDisplay();
                 const errorMsg = result ? (result.error || '不明なエラー') : 'レスポンスが無効です';
                 console.error(`セルマーク失敗: ${errorMsg}`);
                 alert(`セルのマークに失敗しました: ${errorMsg}`);
             }
         } catch (error) {
+            this.updateDisplay();
             console.error('セルマークエラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
         } finally {
@@ -895,9 +898,47 @@ class LuckyBoxUI {
         }
     }
 
-    updateDisplay() {
-        console.log('表示更新開始');
+    // タップしたマス（統合マスなら代表マス）を、エンジン結果を待たずに黒くする
+    paintCellOptimistic(cardIndex, row, col) {
+        const cardEl = document.querySelector(`.bingo-card[data-card-index="${cardIndex}"]`);
+        if (!cardEl) return;
+        const cell = cardEl.querySelector(`.bingo-cell[data-row="${row}"][data-col="${col}"]`);
+        if (!cell || cell.classList.contains('marked')) return;
+        cell.classList.add('marked');
+        cell.removeAttribute('onclick');
+    }
 
+    // マスマーク後の画面更新（全カード再構築を避け、触ったカードだけ差し替える）
+    updateAfterMark(cardIndex) {
+        this.loadBonusStates();
+        if (!this.replaceActiveCard(cardIndex)) {
+            this.updateCardsDisplay();
+        }
+        this.updateDisplays();
+        // 履歴リストは体感に効かないので、次フレームに回す
+        requestAnimationFrame(() => this.updateHistoryDisplay());
+    }
+
+    // アクティブ枠内の1枚だけを差し替える。見つからなければ false（呼び出し側で全面更新）
+    replaceActiveCard(cardIndex) {
+        const card = this.gameState && this.gameState.cards && this.gameState.cards[cardIndex];
+        if (!card) return false;
+        const existing = document.querySelector(`#cards-container .bingo-card[data-card-index="${cardIndex}"]`);
+        if (!existing) return false;
+
+        const keepScrollY = window.scrollY;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = this.createCardElement(card, cardIndex).trim();
+        const next = wrap.firstElementChild;
+        if (!next) return false;
+        existing.replaceWith(next);
+        if (window.scrollY !== keepScrollY) {
+            window.scrollTo(0, keepScrollY);
+        }
+        return true;
+    }
+
+    updateDisplay() {
         // ボーナス欄の「使用済み」状態は、エンジンの現在の状態から読み直す（Undo 後も正しく戻るように）
         this.loadBonusStates();
         this.syncTeamSelect();
@@ -905,8 +946,6 @@ class LuckyBoxUI {
         this.updateCardsDisplay();
         this.updateHistoryDisplay();
         this.updateDisplays();
-        
-        console.log('表示更新完了');
     }
 
     // カードIDごとの表示順位（ラウンド順 → cards.js の cardsByRound に書かれた順）
@@ -939,8 +978,6 @@ class LuckyBoxUI {
 
         // アクティブカード描画
         if (activeContainer) {
-            console.log('updateCardsDisplay: gameState.cards =', this.gameState.cards);
-
             // iPad（Safari）では、カードを描き直した瞬間にページが短くなり、
             // 画面が勝手に上へスクロールすることがある。これを防ぐため、
             // 描き直しの間だけカード欄の高さを固定し、スクロール位置も元に戻す。
@@ -953,11 +990,6 @@ class LuckyBoxUI {
             if (!this.gameState.cards || this.gameState.cards.length === 0) {
                 activeContainer.innerHTML = '<p class="no-cards">カードが追加されていません</p>';
             } else {
-                console.log('カード数:', this.gameState.cards.length);
-                this.gameState.cards.forEach((card, index) => {
-                    console.log(`カード${index}:`, card);
-                });
-
                 // 表示順: ラウンド順 → 同一ラウンド内はカード選択リストの順。
                 // 内部の登録順（Undo・保存データ・マスのタップ判定に使う番号）は変えず、
                 // 表示の並びだけを変える（index は元の番号のまま渡す）。
@@ -973,8 +1005,6 @@ class LuckyBoxUI {
                 activeContainer.innerHTML = ordered.map(({ card, index }) =>
                     this.createCardElement(card, index)
                 ).join('');
-
-                console.log('セルクリックイベント設定完了（onclick属性使用）');
             }
 
             // スクロール位置を元に戻し、次の描画の後で高さの固定を外す
@@ -996,7 +1026,6 @@ class LuckyBoxUI {
             const activeIds = new Set((this.gameState.cards || []).map((c) => c.card_id));
             const cards = (this.gameState.completed_cards || []).filter((c) => !activeIds.has(c.card_id));
             this.completedCards = cards;
-            console.log('completed_cards:', cards);
 
             if (!cards.length) {
                 completedContainer.innerHTML = '<p class="no-cards">コンプリートカードはありません</p>';
@@ -1010,9 +1039,7 @@ class LuckyBoxUI {
 
     createCardElement(card, cardIndex, options = {}) {
         const { disableInteractions = false } = options;
-        console.log(`createCardElement: カード${cardIndex}の詳細`);
-        console.log('card:', card);
-        
+
         // 新フォーマット対応: display_grid または numbers を使用
         const gridData = card.display_grid || card.numbers;
         const cardSize = card.size || [3, 3];
@@ -1089,10 +1116,6 @@ class LuckyBoxUI {
             }
             return null;
         };
-        
-        console.log('gridData:', gridData);
-        console.log('cardSize:', cardSize);
-        console.log('card.marked:', card.marked);
         
         if (!gridData || !Array.isArray(gridData)) {
             console.error('gridDataが配列ではありません:', gridData);

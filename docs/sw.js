@@ -17,6 +17,7 @@ const PRECACHE_URLS = [
   'css/style.css',
   'css/bingo-bonus-fix.css',
   'css/card-look.css',
+  'css/lite.css',
   'js/version.js',
   'js/cards.js',
   'js/engine.js',
