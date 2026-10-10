@@ -424,37 +424,28 @@ class LuckyBoxUI {
 
     async adjustTokens(tokenType, amount) {
         try {
-            console.log(`トークン調整: ${tokenType} ${amount > 0 ? '+' : ''}${amount}`);
-            
-            // フロントエンドの状態を即座に更新
+            // フロントエンドの状態を即座に更新（盤面は変わらないので全面描き直しはしない）
             const currentValue = this.gameState[`${tokenType}_tokens`] || 0;
             const newValue = currentValue + amount;
             
-            // マイナスにならないようにする
             if (newValue < 0) {
-                console.log('トークンは0未満にはできません');
                 return;
             }
             
-            // フロントエンドの状態を更新
             this.gameState[`${tokenType}_tokens`] = newValue;
             this.updateTokensDisplay();
             
-            // サーバーに非同期で更新を送信
             const result = await this.apiCall('adjust_tokens', {
                 token_type: tokenType,
                 amount: amount
             });
             
             if (result && result.game_state) {
-                console.log('トークン調整成功:', result);
-                // サーバーからの応答でゲーム状態を更新
                 this.gameState = result.game_state;
-                // 表示を更新（履歴も含む）
-                this.updateDisplay();
+                this.updateTokensDisplay();
+                this.updateUiAfterHistoryOnly();
             } else {
                 console.error('トークン調整失敗: レスポンスが空です');
-                // ロールバック
                 this.gameState[`${tokenType}_tokens`] = currentValue;
                 this.updateTokensDisplay();
                 alert('トークン調整に失敗しました');
@@ -463,6 +454,12 @@ class LuckyBoxUI {
             console.error('トークン調整エラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
         }
+    }
+
+    // 履歴だけが増えた操作向け。カード盤面は触らないので全面更新しない。
+    updateUiAfterHistoryOnly() {
+        this.updateTokenButtonStates();
+        requestAnimationFrame(() => this.updateHistoryDisplay());
     }
 
     async loadRoundCards() {
@@ -1765,10 +1762,10 @@ class LuckyBoxUI {
             record: !!options.record,
             label: options.label
         });
-        // 履歴に残した場合は、Undo ボタンや操作履歴の表示も更新する
+        // 月・星のトグルは見た目をすでに切り替え済み。盤面は変わらないので履歴と Undo だけ更新する
         if (options.record && result && result.success && result.game_state) {
             this.gameState = result.game_state;
-            this.updateDisplay();
+            this.updateUiAfterHistoryOnly();
         }
     }
 
