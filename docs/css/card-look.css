@@ -137,30 +137,37 @@
 
 /*
  * 「揃った」マスの合図（すぐ処理するか、ラウンド終わりまで待つか）
- *   数字・？: すぐ処理 → 薄いレモン色～薄い赤の脈動（#F8FB8C ⇔ #F0706C）、2.4秒周期
- *   星・月:   ラウンド終わり → 薄いレモン色の固定（#F8FB8C）。動かさない
- * 脈動の時計はページ（html）側。マスを描き直しても周期はリセットされない。
- * 動きを減らす設定（prefers-reduced-motion）の端末では、動かさず、中間の色で止める。
+ *   数字・？: すぐ処理 → 黄地の上に赤を重ね、透明度だけ点滅（!important な background と衝突しない）
+ *   星・月:   ラウンド終わり → 薄いレモン色の固定。動かさない
+ * 動きを減らす設定では、赤を半透明で止める。
  */
-@property --bonus-pulse {
-    syntax: '<number>';
-    inherits: true;
-    initial-value: 0;
-}
-
-html {
-    animation: bonus-pulse-clock 2.4s ease-in-out infinite;
-}
-
-@keyframes bonus-pulse-clock {
-    0%, 100% { --bonus-pulse: 0; }
-    50% { --bonus-pulse: 1; }
+@keyframes bonus-available-blink {
+    0%, 49.9% { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink) {
+    position: relative;
     background: #F8FB8C !important;
     border-color: #E05550 !important;
-    box-shadow: 0 0 10px rgba(240, 112, 108, 0.45) !important;
+    box-shadow: none !important;
+    overflow: hidden;
+}
+
+.bingo-card .bonus-cell.available:not(.bonus-pink)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #F0706C;
+    opacity: 1;
+    z-index: 0;
+    pointer-events: none;
+    animation: bonus-available-blink 2s steps(1, end) infinite;
+}
+
+.bingo-card .bonus-cell.available:not(.bonus-pink) > * {
+    position: relative;
+    z-index: 1;
 }
 
 .bingo-card .bonus-cell.available.bonus-pink {
@@ -169,28 +176,10 @@ html {
     box-shadow: none !important;
 }
 
-.bingo-card .bonus-cell.available:not(.bonus-pink)::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #F0706C;
-    opacity: var(--bonus-pulse);
-    z-index: 0;
-    pointer-events: none;
-}
-
-.bingo-card .bonus-cell.available:not(.bonus-pink) > * {
-    position: relative;
-    z-index: 1;
-}
-
 @media (prefers-reduced-motion: reduce) {
-    html {
+    .bingo-card .bonus-cell.available:not(.bonus-pink)::before {
         animation: none;
-        --bonus-pulse: 0.5;
+        opacity: 0.7;
     }
 }
 
