@@ -205,25 +205,55 @@
                     <hr class="score-sheet-rule">
                     <div class="score-token-block">
                     <div class="score-ex">
-                        <div class="score-ex-row">
-                            <span class="score-ex-mark" id="score-star-icon"></span>
-                            <label class="score-ex-check"><input type="checkbox" id="score-star-ex"> Ex</label>
-                            <select id="score-star-count" class="score-sheet-input" aria-label="星の個数"></select>
-                            <span>個…</span>
-                            <span id="score-star-pts" class="score-readout">0点</span>
+                        <!-- 星だけラウンド別（各行に Ex）。雷・月は1行 -->
+                        <div class="score-token-rounds" data-token="star">
+                            <div class="score-ex-row score-token-head">
+                                <span class="score-ex-mark" id="score-star-icon"></span>
+                                <span class="score-star-label">星（ラウンド別）</span>
+                                <span id="score-star-pts" class="score-readout">0点</span>
+                            </div>
+                            <div class="score-ex-row">
+                                <span class="score-round-label">R1</span>
+                                <select id="score-star-r1" class="score-sheet-input" aria-label="ラウンド1の星の個数"></select>
+                                <span>個…</span>
+                                <label class="score-ex-check"><input type="checkbox" id="score-star-r1-ex"> Ex</label>
+                                <span id="score-star-r1-pts" class="score-readout">0点</span>
+                            </div>
+                            <div class="score-ex-row">
+                                <span class="score-round-label">R2</span>
+                                <select id="score-star-r2" class="score-sheet-input" aria-label="ラウンド2の星の個数"></select>
+                                <span>個…</span>
+                                <label class="score-ex-check"><input type="checkbox" id="score-star-r2-ex"> Ex</label>
+                                <span id="score-star-r2-pts" class="score-readout">0点</span>
+                            </div>
+                            <div class="score-ex-row">
+                                <span class="score-round-label">R3</span>
+                                <select id="score-star-r3" class="score-sheet-input" aria-label="ラウンド3の星の個数"></select>
+                                <span>個…</span>
+                                <label class="score-ex-check"><input type="checkbox" id="score-star-r3-ex"> Ex</label>
+                                <span id="score-star-r3-pts" class="score-readout">0点</span>
+                            </div>
+                            <div class="score-ex-row">
+                                <span class="score-round-label">R4</span>
+                                <select id="score-star-r4" class="score-sheet-input" aria-label="ラウンド4の星の個数"></select>
+                                <span>個…</span>
+                                <label class="score-ex-check"><input type="checkbox" id="score-star-r4-ex"> Ex</label>
+                                <span id="score-star-r4-pts" class="score-readout">0点</span>
+                            </div>
                         </div>
                         <div class="score-ex-row">
                             <span class="score-ex-mark" id="score-lightning-icon"></span>
-                            <label class="score-ex-check"><input type="checkbox" id="score-lightning-ex"> Ex</label>
                             <select id="score-lightning-count" class="score-sheet-input" aria-label="雷の個数"></select>
                             <span>個…</span>
+                            <label class="score-ex-check"><input type="checkbox" id="score-lightning-ex"> Ex</label>
                             <span id="score-lightning-pts" class="score-readout">0点</span>
                         </div>
                         <div class="score-ex-row">
                             <span class="score-ex-mark" id="score-moon-icon"></span>
                             <select id="score-moon-count" class="score-sheet-input" aria-label="月の個数"></select>
-                            <span>個</span>
-                            <span class="score-readout-note">(集計外)</span>
+                            <span>個…</span>
+                            <label class="score-ex-check"><input type="checkbox" id="score-moon-ex"> Ex</label>
+                            <span class="score-readout-note">(得点は別集計)</span>
                         </div>
                     </div>
                         <div class="score-sheet-total">

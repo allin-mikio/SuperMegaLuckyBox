@@ -31,12 +31,16 @@
   };
   const DEFAULT_TEAM = STICKER_CONFIG.defaultTeam;
 
+  const STAR_ROUND_COUNT = 4;
+
   const defaultScoreInputs = () => ({
-    star: 0,
+    // 星だけラウンド別（同一ラウンド内で得点確定）。Ex もラウンドごと
+    stars: [0, 0, 0, 0],
+    star_ex: [false, false, false, false],
     lightning: 0,
     moon: 0,
-    star_ex: false,
     lightning_ex: false,
+    moon_ex: false, // 得点は別集計
   });
 
   const clampScoreCount = (n) => {
@@ -45,14 +49,64 @@
     return Math.max(0, Math.min(99, v));
   };
 
-  // 星: EXなしは 1→1, 2→4, 3個以上→9。EXありは 1→1, 2→4, 3→9, 4個以上は個数×4
+  const normalizeStars = (value, legacyStar) => {
+    const src = Array.isArray(value) ? value : [];
+    const out = [];
+    for (let i = 0; i < STAR_ROUND_COUNT; i++) out.push(clampScoreCount(src[i]));
+    if (!Array.isArray(value) && legacyStar != null) out[0] = clampScoreCount(legacyStar);
+    return out;
+  };
+
+  const normalizeStarEx = (value, legacyBool) => {
+    const src = Array.isArray(value) ? value : [];
+    const out = [];
+    for (let i = 0; i < STAR_ROUND_COUNT; i++) out.push(!!src[i]);
+    if (!Array.isArray(value) && legacyBool != null) {
+      const on = !!legacyBool;
+      for (let i = 0; i < STAR_ROUND_COUNT; i++) out[i] = on;
+    }
+    return out;
+  };
+
+  const cleanScoreInputs = (raw) => {
+    const src = raw || {};
+    // 誤って配列化した雷・月は合計／先頭に戻す
+    const lightningFromArray = Array.isArray(src.lightnings)
+      ? src.lightnings.reduce((s, n) => s + clampScoreCount(n), 0)
+      : null;
+    const moonFromArray = Array.isArray(src.moons)
+      ? src.moons.reduce((s, n) => s + clampScoreCount(n), 0)
+      : null;
+    const lightningExFromArray = Array.isArray(src.lightning_ex)
+      ? src.lightning_ex.some(Boolean)
+      : typeof src.lightning_ex === 'boolean'
+        ? src.lightning_ex
+        : false;
+    const moonExFromArray = Array.isArray(src.moon_ex)
+      ? src.moon_ex.some(Boolean)
+      : typeof src.moon_ex === 'boolean'
+        ? src.moon_ex
+        : false;
+    return {
+      stars: normalizeStars(src.stars, src.star),
+      star_ex: normalizeStarEx(src.star_ex, typeof src.star_ex === 'boolean' ? src.star_ex : undefined),
+      lightning: clampScoreCount(
+        src.lightning != null ? src.lightning : lightningFromArray != null ? lightningFromArray : 0
+      ),
+      moon: clampScoreCount(src.moon != null ? src.moon : moonFromArray != null ? moonFromArray : 0),
+      lightning_ex: !!lightningExFromArray,
+      moon_ex: !!moonExFromArray,
+    };
+  };
+
+  // 星: 1ラウンド分。通常は 1→1, 2→4, 3個以上→9。Exは 1→1, 2→4, 3→9, 4個以上は個数×4
   const starPoints = (count, ex) => {
     if (count <= 0) return 0;
     if (ex) return count <= 3 ? count * count : count * 4;
     return count <= 2 ? count * count : 9;
   };
 
-  // 雷: EXありのときだけ 1個1点。EXなしは 0点
+  // 雷: EXありのときだけ 1個1点
   const lightningPoints = (count, ex) => (ex ? count : 0);
 
   /* ------------------------------------------------------------------ */
@@ -398,7 +452,7 @@
       for (const cardId of this.cards_by_round[roundName]) {
         if (!Object.prototype.hasOwnProperty.call(this.available_cards, cardId)) continue;
         const label = cardId.includes('_') ? cardId.split('_').slice(1).join('_') : cardId;
-        result.push({ card_id: cardId, display_name: `カード ${label}` });
+        result.push({ card_id: cardId, display_name: `LBカード ${label}` });
       }
       return result;
     }
@@ -639,14 +693,14 @@
       const activePoints = Math.floor(activeBlackCells / 2);
       const boardPoints = completedPoints + activePoints;
 
-      const inputs = this.score_inputs || defaultScoreInputs();
-      const star = clampScoreCount(inputs.star);
-      const lightning = clampScoreCount(inputs.lightning);
-      const moon = clampScoreCount(inputs.moon);
-      const starEx = !!inputs.star_ex;
-      const lightningEx = !!inputs.lightning_ex;
-      const starPts = starPoints(star, starEx);
-      const lightningPts = lightningPoints(lightning, lightningEx);
+      const inputs = cleanScoreInputs(this.score_inputs);
+      const starRounds = inputs.stars.map((count, i) => {
+        const ex = inputs.star_ex[i];
+        return { count, ex, points: starPoints(count, ex) };
+      });
+      const starPts = starRounds.reduce((sum, r) => sum + r.points, 0);
+      const starCount = inputs.stars.reduce((sum, n) => sum + n, 0);
+      const lightningPts = lightningPoints(inputs.lightning, inputs.lightning_ex);
       const bonusPoints = starPts + lightningPts;
       const total = boardPoints + bonusPoints;
 
@@ -661,9 +715,9 @@
         active_black_cells: activeBlackCells,
         active_points: activePoints,
         board_points: boardPoints,
-        star: { count: star, ex: starEx, points: starPts },
-        lightning: { count: lightning, ex: lightningEx, points: lightningPts },
-        moon: { count: moon },
+        star: { count: starCount, points: starPts, rounds: starRounds },
+        lightning: { count: inputs.lightning, ex: inputs.lightning_ex, points: lightningPts },
+        moon: { count: inputs.moon, ex: inputs.moon_ex },
         bonus_points: bonusPoints,
         total,
       };
@@ -671,13 +725,12 @@
 
     // 得点欄のスタッフ入力。Undo の対象外（保存は LocalApi が行う）
     setScoreInputs(data) {
-      const next = Object.assign(defaultScoreInputs(), this.score_inputs);
-      if (data && data.star != null) next.star = clampScoreCount(data.star);
-      if (data && data.lightning != null) next.lightning = clampScoreCount(data.lightning);
-      if (data && data.moon != null) next.moon = clampScoreCount(data.moon);
-      if (data && data.star_ex != null) next.star_ex = !!data.star_ex;
-      if (data && data.lightning_ex != null) next.lightning_ex = !!data.lightning_ex;
-      this.score_inputs = next;
+      const prev = cleanScoreInputs(this.score_inputs);
+      const merged = Object.assign({}, prev, data || {});
+      if (!data || data.stars == null) merged.stars = prev.stars;
+      if (!data || data.star_ex == null) merged.star_ex = prev.star_ex;
+      if (data && data.star != null && data.stars == null) merged.star = data.star;
+      this.score_inputs = cleanScoreInputs(merged);
       this.updateScore();
       return null;
     }
@@ -695,7 +748,7 @@
         round_num: this.round_num,
         bonus_states: this.bonus_states.slice(),
         team: this.team,
-        score_inputs: Object.assign(defaultScoreInputs(), this.score_inputs),
+        score_inputs: cleanScoreInputs(this.score_inputs),
         action: actionDescription,
         timestamp: new Date().toISOString(),
       };

@@ -679,7 +679,7 @@ class LuckyBoxGame:
                 label = card_id
             result.append({
                 'card_id': card_id,
-                'display_name': f"カード {label}"
+                'display_name': f"LBカード {label}"
             })
         return result
     
@@ -903,9 +903,18 @@ class LuckyBoxGame:
             'active_black_cells': active_black_cells,
             'active_points': active_points,
             'board_points': board_points,
-            'star': {'count': 0, 'ex': False, 'points': 0},
+            'star': {
+                'count': 0,
+                'points': 0,
+                'rounds': [
+                    {'count': 0, 'ex': False, 'points': 0},
+                    {'count': 0, 'ex': False, 'points': 0},
+                    {'count': 0, 'ex': False, 'points': 0},
+                    {'count': 0, 'ex': False, 'points': 0},
+                ],
+            },
             'lightning': {'count': 0, 'ex': False, 'points': 0},
-            'moon': {'count': 0},
+            'moon': {'count': 0, 'ex': False},
             'bonus_points': 0,
             'total': total
         }

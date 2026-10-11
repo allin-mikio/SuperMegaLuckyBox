@@ -606,7 +606,16 @@ class LuckyBoxUI {
         if (lightningIcon) lightningIcon.innerHTML = this.getBonusIcon('lightning');
         if (moonIcon) moonIcon.innerHTML = this.getBonusIcon('moon');
 
-        ['score-star-count', 'score-lightning-count', 'score-moon-count'].forEach((id) => {
+        const countIds = [
+            'score-star-r1', 'score-star-r2', 'score-star-r3', 'score-star-r4',
+            'score-lightning-count', 'score-moon-count',
+        ];
+        const exIds = [
+            'score-star-r1-ex', 'score-star-r2-ex', 'score-star-r3-ex', 'score-star-r4-ex',
+            'score-lightning-ex', 'score-moon-ex',
+        ];
+
+        countIds.forEach((id) => {
             const select = document.getElementById(id);
             if (!select || select.options.length) return;
             for (let n = 0; n <= 99; n++) {
@@ -619,21 +628,21 @@ class LuckyBoxUI {
 
         const save = async () => {
             const result = await this.apiCall('set_score_inputs', {
-                star: Number(document.getElementById('score-star-count').value),
+                stars: [1, 2, 3, 4].map((r) => Number(document.getElementById(`score-star-r${r}`).value)),
+                star_ex: [1, 2, 3, 4].map((r) => document.getElementById(`score-star-r${r}-ex`).checked),
                 lightning: Number(document.getElementById('score-lightning-count').value),
                 moon: Number(document.getElementById('score-moon-count').value),
-                star_ex: document.getElementById('score-star-ex').checked,
                 lightning_ex: document.getElementById('score-lightning-ex').checked,
+                moon_ex: document.getElementById('score-moon-ex').checked,
             });
             if (result && result.game_state) this.gameState = result.game_state;
             this.updateDisplay();
         };
 
-        ['score-star-count', 'score-lightning-count', 'score-moon-count', 'score-star-ex', 'score-lightning-ex']
-            .forEach((id) => {
-                const el = document.getElementById(id);
-                if (el) el.addEventListener('change', save);
-            });
+        countIds.concat(exIds).forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', save);
+        });
     }
 
     syncScoreInputs() {
@@ -641,6 +650,7 @@ class LuckyBoxUI {
         const star = details.star || {};
         const lightning = details.lightning || {};
         const moon = details.moon || {};
+        const rounds = Array.isArray(star.rounds) ? star.rounds : [];
         const setVal = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.value = String(value);
@@ -649,11 +659,20 @@ class LuckyBoxUI {
             const el = document.getElementById(id);
             if (el) el.checked = !!on;
         };
-        setVal('score-star-count', star.count || 0);
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        for (let i = 0; i < 4; i++) {
+            const round = rounds[i] || {};
+            setVal(`score-star-r${i + 1}`, round.count || 0);
+            setCheck(`score-star-r${i + 1}-ex`, round.ex);
+            setText(`score-star-r${i + 1}-pts`, `${round.points || 0}点`);
+        }
         setVal('score-lightning-count', lightning.count || 0);
         setVal('score-moon-count', moon.count || 0);
-        setCheck('score-star-ex', star.ex);
         setCheck('score-lightning-ex', lightning.ex);
+        setCheck('score-moon-ex', moon.ex);
     }
 
     /* ---------------- シール編集（ラウンド4の Last） ---------------- */
@@ -1264,7 +1283,7 @@ class LuckyBoxUI {
 
         return `
             <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-round="${this.getCardRound(card.card_id)}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
-                <div class="card-header">カード ${card.card_id}</div>
+                <div class="card-header">LBカード ${card.card_id}</div>
                 ${stickerToolsHtml}
                 <div class="card-content">
                     <div class="bingo-board" style="--cols: ${colCount};">
