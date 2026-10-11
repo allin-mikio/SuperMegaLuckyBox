@@ -130,16 +130,18 @@
                 </div>
             </section>
 
+            <!-- Undo / オールリセット（雷トレイの増減で位置が動かないよう、Bingo Cards の上に固定） -->
+            <section class="board-actions" aria-label="盤面操作">
+                <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
+            </section>
+
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">
                 <div class="section-header">
                     <h2>🗂️ Bingo Cards</h2>
                     <!-- 雷トークン：持っている数だけ⚡を並べる。使うときにタップすると1つ減る（中身は game.js が作る） -->
                     <div id="lightning-tray" class="lightning-tray" role="group" aria-label="雷"></div>
-                    <div class="header-actions">
-                        <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
-                        <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
-                    </div>
                 </div>
                 <div id="cards-container">
                     <p class="no-cards">カードが追加されていません</p>

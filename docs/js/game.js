@@ -255,8 +255,9 @@ class LuckyBoxUI {
         this._lightningShown = count;
 
         const icons = `<button type="button" class="lightning-token" aria-label="雷を1つ使う">${this.getBonusIcon('lightning')}</button>`.repeat(count);
+        const countLabel = `<span class="lightning-count" aria-label="雷 ${count}個">${count}</span>`;
         const add = '<button type="button" class="lightning-add staff-only" aria-label="雷を1つ増やす">＋</button>';
-        tray.innerHTML = icons + add;
+        tray.innerHTML = icons + countLabel + add;
     }
 
     // トークンボタンの設定

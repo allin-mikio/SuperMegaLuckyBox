@@ -607,16 +607,26 @@ body #lightning-minus2.lightning-effect-btn.active {
     transform: none;
 }
 
+/* Undo / オールリセット（Bingo Cards の上。雷数で位置が変わらない） */
+.board-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 0 0 10px;
+    border-bottom: 2px solid #E0E0E0;
+}
+
 /* ビンゴカード表示 */
 .bingo-cards {
     min-height: 200px;
 }
 
-/* セクション見出し + 右側ボタン（ビンゴカード見出しのUndo用） */
+/* セクション見出し + 雷トレイ */
 .section-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 15px;
@@ -628,6 +638,7 @@ body #lightning-minus2.lightning-effect-btn.active {
     margin: 0;
     border-bottom: none;
     padding-bottom: 0;
+    flex: 0 0 auto;
 }
 
 /* 見出しの右に並べる雷トークン（持っている数だけ⚡。タップで1つ減る） */
@@ -673,6 +684,19 @@ body #lightning-minus2.lightning-effect-btn.active {
     background: #FFE680;
 }
 
+/* 雷の実数（アイコン列と「＋」のあいだ） */
+.lightning-count {
+    min-width: 1.4em;
+    padding: 0 4px;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #2A6B3A;
+    font-variant-numeric: tabular-nums;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 /* スタッフ専用の「＋」（雷を1つ増やす） */
 .lightning-add {
     background: #fff;
@@ -680,13 +704,6 @@ body #lightning-minus2.lightning-effect-btn.active {
     color: #333;
     font-size: 1.3rem;
     font-weight: bold;
-}
-
-/* 見出し右のボタン群（Undo、スタッフモード時はオールリセットも） */
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 .btn-inline {
@@ -1302,12 +1319,18 @@ body #lightning-minus2.lightning-effect-btn.active {
 /* バージョン表示（コンテナの右上の隅） */
 .version-badge {
     position: absolute;
-    /* 見た目の位置は従来どおり（top 8px / right 14px 相当）。
-       スタッフモードの長押し対象なので、指で押しやすいよう余白ぶんだけ押せる範囲を広げている */
+    /* 長押しの当たり判定は padding で文字より大きくする（目安 約 48px 高） */
     top: 0;
     right: 0;
-    padding: 8px 14px 14px 24px;
-    font-size: 0.8rem;
+    min-height: 48px;
+    min-width: 120px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 10px 16px 18px 28px;
+    font-size: 0.95rem;
+    line-height: 1.2;
     color: #777;
     -webkit-user-select: none;
     user-select: none;
