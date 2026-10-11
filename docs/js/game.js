@@ -494,6 +494,7 @@ class LuckyBoxUI {
     updateCardSelect(cards) {
         const cardSelect = document.getElementById('card-id');
         if (!cardSelect) return;
+        const addBtn = document.getElementById('add-card-btn');
         
         // 現在追加されているカードのIDを取得
         // （盤面にあるカードと、コンプリートのプールに移ったカードは、追加できない）
@@ -503,31 +504,31 @@ class LuckyBoxUI {
         // 今後は使わないカード。ラウンド4は Last 1枚だけを登録し、シールを貼って変化させる
         const hiddenCardIds = ['LastSP'];
         
-        // セレクトボックスをクリア
-        cardSelect.innerHTML = '<option value="">-- カードを選択 --</option>';
+        cardSelect.innerHTML = '';
         
-        // カードオプションを追加（追加済みのカードは除外）
-        let availableCardsCount = 0;
-        cards.forEach(card => {
-            if (!addedCardIds.includes(card.card_id) && !hiddenCardIds.includes(card.card_id)) {
-                const option = document.createElement('option');
-                option.value = card.card_id;
-                option.textContent = card.display_name;
-                cardSelect.appendChild(option);
-                availableCardsCount++;
-            }
+        // 追加済みを除いた有効カード。先頭がデフォルト選択になる
+        const available = cards.filter((card) =>
+            !addedCardIds.includes(card.card_id) && !hiddenCardIds.includes(card.card_id)
+        );
+        available.forEach((card) => {
+            const option = document.createElement('option');
+            option.value = card.card_id;
+            option.textContent = card.display_name;
+            cardSelect.appendChild(option);
         });
         
-        // 追加可能なカードがない場合はメッセージを表示
-        if (availableCardsCount === 0) {
+        if (available.length === 0) {
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = '追加可能なカードがありません';
-            option.disabled = true;
+            option.textContent = '[追加可能なカードがありません]';
             cardSelect.appendChild(option);
+            cardSelect.disabled = true;
+            if (addBtn) addBtn.disabled = true;
+        } else {
+            cardSelect.disabled = false;
+            cardSelect.selectedIndex = 0;
+            if (addBtn) addBtn.disabled = false;
         }
-        
-        console.log(`カードセレクト更新完了: 表示中 ${availableCardsCount}枚 / 全 ${cards.length}枚`);
     }
 
     // サーバーへ送る代わりに、ブラウザ内のゲームエンジン(engine.js)を呼び出す
@@ -548,24 +549,17 @@ class LuckyBoxUI {
             const cardId = cardSelect.value;
             
             if (!cardId) {
-                alert('カードを選択してください');
+                alert('追加可能なカードがありません');
                 return;
             }
-            
-            console.log(`選択されたカードID: ${cardId}`);
             
             const result = await this.apiCall('add_card', { card_id: cardId });
             
             if (result.success) {
-                console.log('カード追加成功');
                 this.gameState = result.game_state;
                 this.updateDisplay();
-                
-                // セレクトボックスを更新して追加済みカードを非表示にする
+                // 追加済みを除いたリストを作り直し、先頭をデフォルト選択にする
                 await this.loadRoundCards();
-                
-                // セレクトボックスをリセット
-                cardSelect.value = '';
             } else {
                 console.error('カード追加失敗:', result.error);
                 alert(`カード追加失敗: ${result.error}`);
