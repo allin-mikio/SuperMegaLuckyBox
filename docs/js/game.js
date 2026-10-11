@@ -168,7 +168,6 @@ class LuckyBoxUI {
             undoBtn.parentNode.replaceChild(newUndoBtn, undoBtn);
             
             newUndoBtn.addEventListener('click', () => {
-                console.log('Undoボタンクリック');
                 this.undo();
             });
         });
@@ -220,7 +219,6 @@ class LuckyBoxUI {
                 return;
             }
             
-            console.log(`カード${cardIndex}のセルをクリック: 行${row}, 列${col}`);
             this.markCell(cardIndex, row, col);
         };
         
@@ -274,7 +272,6 @@ class LuckyBoxUI {
             lightningPlusBtn.parentNode.replaceChild(newBtn, lightningPlusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('雷トークン+1');
                 this.adjustTokens('lightning', 1);
             });
         }
@@ -285,7 +282,6 @@ class LuckyBoxUI {
             lightningMinusBtn.parentNode.replaceChild(newBtn, lightningMinusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('雷トークン-1');
                 this.adjustTokens('lightning', -1);
             });
         }
@@ -300,7 +296,6 @@ class LuckyBoxUI {
             moonPlusBtn.parentNode.replaceChild(newBtn, moonPlusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('月トークン+1');
                 this.adjustTokens('moon', 1);
             });
         }
@@ -311,7 +306,6 @@ class LuckyBoxUI {
             moonMinusBtn.parentNode.replaceChild(newBtn, moonMinusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('月トークン-1');
                 this.adjustTokens('moon', -1);
             });
         }
@@ -326,7 +320,6 @@ class LuckyBoxUI {
             starPlusBtn.parentNode.replaceChild(newBtn, starPlusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('星トークン+1');
                 this.adjustTokens('star', 1);
             });
         }
@@ -337,7 +330,6 @@ class LuckyBoxUI {
             starMinusBtn.parentNode.replaceChild(newBtn, starMinusBtn);
             
             newBtn.addEventListener('click', () => {
-                console.log('星トークン-1');
                 this.adjustTokens('star', -1);
             });
         }
@@ -795,17 +787,24 @@ class LuckyBoxUI {
 
     async undo() {
         try {
-            console.log('Undo処理開始');
-            console.log('現在の履歴数:', this.gameState?.history?.length || 0);
-            
+            const beforeKey = this.cardMembershipKey();
             const result = await this.apiCall('undo', {});
-            console.log('UndoAPIレスポンス:', result);
             
             if (result && result.success) {
-                console.log('Undo成功');
                 this.gameState = result.game_state;
-                this.updateDisplay();
-                await this.loadRoundCards();
+                const afterKey = this.cardMembershipKey();
+                this.loadBonusStates();
+                if (beforeKey === afterKey && this.refreshActiveCardsInPlace()) {
+                    // カード構成が同じ（マスUndoなど）→ 選択リスト再構築も全面innerHTMLも避ける
+                    this.updateDisplays();
+                    requestAnimationFrame(() => this.updateHistoryDisplay());
+                } else {
+                    this.syncTeamSelect();
+                    this.updateCardsDisplay();
+                    this.updateDisplays();
+                    requestAnimationFrame(() => this.updateHistoryDisplay());
+                    await this.loadRoundCards();
+                }
             } else {
                 console.error('Undo失敗:', result);
                 const errorMsg = result ? result.error : 'レスポンスが無効です';
@@ -815,6 +814,24 @@ class LuckyBoxUI {
             console.error('Undoエラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
         }
+    }
+
+    // 盤面／コンプリートに載っているカードIDの集合（Undo 後に選択リスト更新が要るかの判定用）
+    cardMembershipKey() {
+        if (!this.gameState) return '';
+        const active = (this.gameState.cards || []).map((c) => c.card_id);
+        const done = (this.gameState.completed_cards || []).map((c) => c.card_id);
+        return `${active.join(',')}|${done.join(',')}`;
+    }
+
+    // アクティブカードを1枚ずつ差し替える。失敗したら false（呼び出し側で全面更新）
+    refreshActiveCardsInPlace() {
+        const cards = (this.gameState && this.gameState.cards) || [];
+        if (!cards.length) return false;
+        for (let i = 0; i < cards.length; i++) {
+            if (!this.replaceActiveCard(i)) return false;
+        }
+        return true;
     }
 
     async reset(confirmed = false) {
@@ -925,8 +942,8 @@ class LuckyBoxUI {
         if (!this.replaceActiveCard(cardIndex)) {
             this.updateCardsDisplay();
         }
+        // 得点・雷トレイは必要。履歴は次フレーム
         this.updateDisplays();
-        // 履歴リストは体感に効かないので、次フレームに回す
         requestAnimationFrame(() => this.updateHistoryDisplay());
     }
 
@@ -955,8 +972,9 @@ class LuckyBoxUI {
         this.syncTeamSelect();
         
         this.updateCardsDisplay();
-        this.updateHistoryDisplay();
         this.updateDisplays();
+        // 履歴DOMは操作の体感に効かないので後回し
+        requestAnimationFrame(() => this.updateHistoryDisplay());
     }
 
     // カードIDごとの表示順位（ラウンド順 → cards.js の cardsByRound に書かれた順）
@@ -1309,14 +1327,6 @@ class LuckyBoxUI {
         const colBonuses = card.col_bonuses || [];
         const completedLines = card.completed_lines || [];
         
-        console.log('ボーナス表示生成:', {
-            cardId: card.card_id,
-            gridData,
-            rowBonuses,
-            colBonuses,
-            completedLines
-        });
-        
         // 完成した列を記録
         const completedRows = new Set();
         const completedCols = new Set();
@@ -1344,7 +1354,7 @@ class LuckyBoxUI {
                 const markedClass = isMarked ? 'marked' : '';
                 const bgColor = isMarked ? 'black' : 'white';
                 const textColor = isMarked ? 'white' : 'black';
-                const clickHandler = isMarked ? '' : `onclick="console.log('直接クリック検出:', this); window.luckyBoxUI.markCell(${cardIndex}, ${rowIndex}, ${colIndex});"`;
+                const clickHandler = isMarked ? '' : `onclick="window.luckyBoxUI.markCell(${cardIndex}, ${rowIndex}, ${colIndex});"`;
                 const cursor = isMarked ? 'default' : 'pointer';
                 return `<div class="card-cell ${markedClass}" style="background: ${bgColor}; color: ${textColor}; cursor: ${cursor};" data-number="${number}" data-row="${rowIndex}" data-col="${colIndex}" ${clickHandler}>${number}</div>`;
             }).join('');
@@ -1566,6 +1576,8 @@ class LuckyBoxUI {
 
         const history = this.gameState.history || [];
         const currentPosition = this.gameState.history_position || 0;
+        // スタッフ用リストが長すぎると DOM が重いので、新しい方から上限だけ描画
+        const HISTORY_DISPLAY_LIMIT = 40;
 
         historyListElement.innerHTML = '';
 
@@ -1579,8 +1591,10 @@ class LuckyBoxUI {
 
         const toDisplay = history.slice().reverse();
         const totalEntries = toDisplay.length;
+        const visible = toDisplay.slice(0, HISTORY_DISPLAY_LIMIT);
+        const frag = document.createDocumentFragment();
 
-        toDisplay.forEach((entry, index) => {
+        visible.forEach((entry, index) => {
             const historyItem = document.createElement('div');
             historyItem.className = 'history-item';
 
@@ -1594,8 +1608,17 @@ class LuckyBoxUI {
                 historyItem.classList.add('current');
             }
 
-            historyListElement.appendChild(historyItem);
+            frag.appendChild(historyItem);
         });
+
+        if (totalEntries > HISTORY_DISPLAY_LIMIT) {
+            const more = document.createElement('p');
+            more.className = 'no-history';
+            more.textContent = `…他 ${totalEntries - HISTORY_DISPLAY_LIMIT} 件`;
+            frag.appendChild(more);
+        }
+
+        historyListElement.appendChild(frag);
 
         if (historyPositionElement) {
             const displayPosition = Math.max(1, totalEntries - currentPosition);

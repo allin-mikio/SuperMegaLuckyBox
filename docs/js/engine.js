@@ -1053,6 +1053,9 @@
       this.mutationCount = 0;
 
       this.game = new LuckyBoxGame(this.cards);
+      this._persistDirty = false;
+      this._persistTimer = null;
+      this._persistFlushInstalled = false;
       const payload = this.store.load();
       if (payload) {
         const candidate = new LuckyBoxGame(this.cards);
@@ -1061,6 +1064,7 @@
           this.restored = true;
         }
       }
+      this._installPersistFlush();
     }
 
     onSaveStatus(listener) {
@@ -1076,7 +1080,20 @@
       };
     }
 
+    // 画面描画を優先するため、localStorage 書き込みは次タスクへ回す。
+    // 連続操作はまとめて1回書き、ページを離れるときは flush する。
     _persist() {
+      this._persistDirty = true;
+      if (this._persistTimer != null) return;
+      this._persistTimer = setTimeout(() => {
+        this._persistTimer = null;
+        this._flushPersist();
+      }, 0);
+    }
+
+    _flushPersist() {
+      if (!this._persistDirty) return;
+      this._persistDirty = false;
       this.store.save(this.game.exportPersisted());
       const status = this.saveStatus();
       this.listeners.forEach((fn) => {
@@ -1086,6 +1103,16 @@
           console.error(err);
         }
       });
+    }
+
+    _installPersistFlush() {
+      if (this._persistFlushInstalled || typeof document === 'undefined') return;
+      this._persistFlushInstalled = true;
+      const flush = () => this._flushPersist();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flush();
+      });
+      global.addEventListener('pagehide', flush);
     }
 
     // 「使用済み」のボーナス欄のキー一覧（画面の描画用。ゲーム状態 getGameState とは別にしてある）
