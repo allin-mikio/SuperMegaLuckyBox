@@ -612,9 +612,8 @@ body #lightning-minus2.lightning-effect-btn.active {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 12px;
-    padding: 0 0 10px;
-    border-bottom: 2px solid #E0E0E0;
+    /* section 共通の padding: 12px を維持する（0 にするとボタンが枠の左上にはみ出して見える） */
+    margin-bottom: 16px;
 }
 
 /* ビンゴカード表示 */
