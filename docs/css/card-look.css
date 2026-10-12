@@ -186,7 +186,7 @@
     overflow: hidden;
     outline: 3px solid #E05550;
     outline-offset: -3px;
-    animation: bonus-outline-blink 2s steps(1, end) infinite;
+    animation: bonus-outline-blink 3.2s steps(1, end) infinite;
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink)::before {
@@ -197,7 +197,7 @@
     opacity: 1;
     z-index: 0;
     pointer-events: none;
-    animation: bonus-fill-blink 2s steps(1, end) infinite;
+    animation: bonus-fill-blink 3.2s steps(1, end) infinite;
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink) > * {
@@ -211,7 +211,7 @@
     box-shadow: none !important;
     outline: 3px solid #E05550;
     outline-offset: -3px;
-    animation: bonus-outline-blink 2s steps(1, end) infinite;
+    animation: bonus-outline-blink 3.2s steps(1, end) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

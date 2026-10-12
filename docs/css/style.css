@@ -1396,20 +1396,27 @@ body.staff-mode .version-badge {
     }
 }
 
-/* 履歴表示セクション */
-/* 得点（スタッフモードのみ。コンプリートカードと操作履歴のあいだ） */
-.score-sheet {
-    background: linear-gradient(135deg, #F4FFF0 0%, #D8F0C8 100%);
-    border: 2px solid #7CB342;
+/* Complete Cards / Scores / 操作履歴：共通の緑背景（旧Scoresより少し濃い） */
+section.completed-cards,
+section.score-sheet,
+section.history-display {
+    background: linear-gradient(135deg, #E4F5D8 0%, #C2E39A 100%);
+    border: 2px solid #689F38;
     border-radius: 12px;
     padding: 12px 16px;
     margin-bottom: 16px;
 }
 
-.score-sheet h2 {
+section.completed-cards h2,
+section.score-sheet h2,
+section.history-display h2 {
     font-size: 1.2rem;
     margin: 0 0 10px;
     color: #33691E;
+}
+
+.score-sheet h2 {
+    margin: 0 0 10px;
 }
 
 .score-sheet-body {
@@ -1643,18 +1650,7 @@ select.score-sheet-input {
     }
 }
 
-.history-display {
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 12px 15px;
-    margin-bottom: 20px;
-}
-
 .history-display h2 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
-    color: #333;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -1881,20 +1877,16 @@ body.staff-mode .container {
     border-width: 6px;
 }
 
-body.staff-mode section:not(.card-management):not(.completed-cards):not(.score-sheet) {
+body.staff-mode section:not(.card-management):not(.completed-cards):not(.score-sheet):not(.history-display) {
     background: linear-gradient(135deg, #FFF1F1 0%, #FFD9D9 100%);
 }
 
-body.staff-mode section.score-sheet {
-    background: linear-gradient(135deg, #F4FFF0 0%, #D8F0C8 100%);
-    border-color: #7CB342;
-}
-
-/* コンプリートカードの欄。カードの黄色に埋もれないよう、色相をずらした薄いアプリコット（スタッフモードでも同じ） */
-section.completed-cards,
-body.staff-mode section.completed-cards {
-    background: linear-gradient(135deg, #FFE8D2 0%, #F0C49A 100%);
-    border-color: #E09A62;
+/* Complete Cards / Scores / 操作履歴は緑のまま（スタッフモードの薄ピンク上書きを無効化） */
+body.staff-mode section.completed-cards,
+body.staff-mode section.score-sheet,
+body.staff-mode section.history-display {
+    background: linear-gradient(135deg, #E4F5D8 0%, #C2E39A 100%);
+    border-color: #689F38;
 }
 
 /* 赤い地色の上でも読めるように、タイトルとフッターは白文字にする */
