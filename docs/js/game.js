@@ -10,6 +10,7 @@ class LuckyBoxUI {
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
         this.setupTeamSelect();
         this.setupScoreInputs();
+        this.setupScoreSubmit();
         // スタッフモードを終えたら、シール編集も終える
         document.addEventListener('staffmodechange', (event) => {
             if (!event.detail.on && this.stickerEdit) {
@@ -635,6 +636,140 @@ class LuckyBoxUI {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', save);
         });
+    }
+
+    /* ---------------- Scores → スプシ送信 ---------------- */
+    setupScoreSubmit() {
+        const btn = document.getElementById('score-submit-btn');
+        if (!btn || btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => this.submitScoreToSheet());
+    }
+
+    setScoreSubmitStatus(message, isError) {
+        const el = document.getElementById('score-submit-status');
+        if (!el) return;
+        el.textContent = message || '';
+        el.classList.toggle('is-error', !!isError);
+    }
+
+    buildScoreSyncPayload() {
+        const details = (this.gameState && this.gameState.score_details) || {};
+        const moon = details.moon || {};
+        const team = window.LuckyBoxEngine.getApi().getTeam();
+        const cfg = window.SCORE_SYNC || {};
+        // Scores列: A team / B 盤面 / C トークン / E 月Ex / F 月数 / K updated_at
+        // D・G・H・I（総合・順位・月点）はスプシ数式（MoonPts）
+        return {
+            team,
+            sheet: cfg.SHEET_NAME || 'Scores',
+            start_row: Number(cfg.START_ROW) || 2,
+            board: details.board_points ?? 0,
+            token: details.bonus_points ?? 0,
+            moon_ex: !!moon.ex,
+            moon: moon.count || 0,
+            updated_at: new Date().toISOString(),
+        };
+    }
+
+    async submitScoreToSheet() {
+        const cfg = window.SCORE_SYNC || {};
+        const url = (cfg.WEB_APP_URL || '').trim();
+        const btn = document.getElementById('score-submit-btn');
+        if (!url) {
+            this.setScoreSubmitStatus('送信先 URL 未設定（score-sync.js の WEB_APP_URL）', true);
+            return;
+        }
+        // ライブラリ URL や /exec 以外は Web アプリとして呼べない
+        if (url.includes('/macros/library/') || !/\/macros\/s\/[^/]+\/exec\/?$/.test(url.split('?')[0])) {
+            this.setScoreSubmitStatus(
+                'URL不正: デプロイ「ウェブアプリ」の末尾 /exec のURLを入れてください',
+                true
+            );
+            return;
+        }
+
+        const payload = this.buildScoreSyncPayload();
+        if (!payload.team) {
+            this.setScoreSubmitStatus('チームが未選択です', true);
+            return;
+        }
+
+        if (btn) btn.disabled = true;
+        this.setScoreSubmitStatus(`送信中…（チーム ${payload.team}）`, false);
+
+        try {
+            // 一部端末では POST が CORS で落ちるため、失敗したら GET ?payload= にフォールバック
+            let parsed = null;
+            let lastError = null;
+            try {
+                parsed = await this.postScoreSync(url, payload);
+            } catch (postErr) {
+                lastError = postErr;
+                console.warn('score sync POST failed, try GET', postErr);
+            }
+            if (!parsed) {
+                try {
+                    parsed = await this.getScoreSync(url, payload);
+                    lastError = null;
+                } catch (getErr) {
+                    lastError = getErr;
+                    console.warn('score sync GET failed', getErr);
+                }
+            }
+            if (!parsed) {
+                if (lastError) throw lastError;
+                this.setScoreSubmitStatus(
+                    '送信失敗: 応答が不正（Apps Script を新バージョンで再デプロイし /exec で JSON 確認）',
+                    true
+                );
+                return;
+            }
+            if (parsed.ok === false) {
+                this.setScoreSubmitStatus(`送信失敗: ${parsed.error || 'unknown'}`, true);
+                return;
+            }
+            const row = parsed.row ? `（行 ${parsed.row}）` : '';
+            this.setScoreSubmitStatus(`送信完了: チーム ${payload.team}${row}`, false);
+        } catch (error) {
+            console.error('score sync error:', error);
+            const tip = /Failed to fetch/i.test(String(error && error.message))
+                ? '（Apps Script を「編集→新バージョン」で再デプロイ。/exec で JSON 確認。新しいデプロイなら URL も更新）'
+                : '';
+            this.setScoreSubmitStatus(`送信失敗: ${error.message || error}${tip}`, true);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async postScoreSync(url, payload) {
+        // Apps Script は application/json だとプリフライトで落ちやすい → text/plain
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload),
+            redirect: 'follow',
+        });
+        return this.parseScoreSyncResponse(res);
+    }
+
+    async getScoreSync(url, payload) {
+        const endpoint = new URL(url);
+        endpoint.searchParams.set('payload', JSON.stringify(payload));
+        const res = await fetch(endpoint.toString(), {
+            method: 'GET',
+            redirect: 'follow',
+        });
+        return this.parseScoreSyncResponse(res);
+    }
+
+    async parseScoreSyncResponse(res) {
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (_) {
+            return null;
+        }
     }
 
     syncScoreInputs() {

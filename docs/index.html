@@ -116,7 +116,7 @@
                         </div>
                     </div>
                     <div class="status-item status-item--score">
-                        <span class="status-label">得点</span>
+                        <span class="status-label">Scores</span>
                         <div class="status-value">
                             <span id="score-total">0</span>
                             <span class="status-unit">点</span>
@@ -154,9 +154,9 @@
                 </div>
             </section>
 
-            <!-- 得点（スタッフモードのみ。コンプリートカードと操作履歴のあいだ） -->
+            <!-- Scores（スタッフモードのみ。コンプリートカードと操作履歴のあいだ） -->
             <section class="score-sheet staff-only">
-                <h2>🧮 得点</h2>
+                <h2>🧮 Scores</h2>
                 <div class="score-sheet-body">
                     <div class="score-board-block">
                         <div class="score-board-main">
@@ -259,6 +259,8 @@
                         <div class="score-sheet-total">
                             <div class="score-sheet-sum">トークン小計 <span id="score-token-pts" class="score-readout">0</span>点</div>
                             <div class="score-sheet-final">合計 <span id="score-final" class="score-readout">0</span>点</div>
+                            <button type="button" id="score-submit-btn" class="btn btn-primary btn-inline score-submit-btn">結果送信</button>
+                            <div id="score-submit-status" class="score-submit-status" aria-live="polite"></div>
                         </div>
                     </div>
                 </div>
@@ -281,6 +283,7 @@
     <script src="js/version.js"></script>
     <script src="js/cards.js"></script>
     <script src="js/engine.js"></script>
+    <script src="js/score-sync.js"></script>
     <script src="js/game.js"></script>
     <script src="js/staff.js"></script>
     <script src="js/pwa.js"></script>

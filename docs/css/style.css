@@ -1518,6 +1518,23 @@ body.staff-mode .version-badge {
     margin: 0 4px;
 }
 
+.score-submit-btn {
+    margin-top: 8px;
+    align-self: flex-end;
+}
+
+.score-submit-status {
+    min-height: 1.2em;
+    font-size: 0.85rem;
+    font-weight: normal;
+    text-align: right;
+    color: #33691E;
+}
+
+.score-submit-status.is-error {
+    color: #B71C1C;
+}
+
 .score-ex {
     display: flex;
     flex-direction: column;

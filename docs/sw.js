@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
   'js/version.js',
   'js/cards.js',
   'js/engine.js',
+  'js/score-sync.js',
   'js/game.js',
   'js/staff.js',
   'js/pwa.js',
