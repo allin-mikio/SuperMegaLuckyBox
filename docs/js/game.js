@@ -668,8 +668,15 @@ class LuckyBoxUI {
             token: details.bonus_points ?? 0,
             moon_ex: !!moon.ex,
             moon: moon.count || 0,
-            updated_at: new Date().toISOString(),
+            updated_at: this.formatScoreSyncTime(new Date()),
         };
+    }
+
+    // 例: 10/12 15:50（端末ローカル時刻）
+    formatScoreSyncTime(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
     async submitScoreToSheet() {

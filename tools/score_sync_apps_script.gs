@@ -81,7 +81,7 @@ function handlePayload_(data) {
     moonEx,
     Number(data.moon) || 0,
   ]]);
-  sheet.getRange(rowIndex, 11).setValue((data && data.updated_at) || new Date().toISOString());
+  sheet.getRange(rowIndex, 11).setValue((data && data.updated_at) || formatUpdatedAt_(new Date()));
 
   return jsonOut({ ok: true, team: team, row: rowIndex, sheet: sheetName });
 }
@@ -143,6 +143,15 @@ function ensureLayout_(sheet, startRow) {
     rankRange + ',' + totalRange + ',' + teamRange +
     '},' + teamRange + '<>""),1,TRUE),"")';
   sheet.getRange(startRow, 13).setFormula(sortTable);
+}
+
+// 例: 10/12 15:50（スクリプトのタイムゾーン＝スプシ設定に依存）
+function formatUpdatedAt_(date) {
+  var m = date.getMonth() + 1;
+  var d = date.getDate();
+  var hh = ('0' + date.getHours()).slice(-2);
+  var mm = ('0' + date.getMinutes()).slice(-2);
+  return m + '/' + d + ' ' + hh + ':' + mm;
 }
 
 function jsonOut(obj) {
