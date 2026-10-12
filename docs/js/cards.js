@@ -1,7 +1,7 @@
 // カード定義（tools/export_cards.py で app.py から生成）
 // カードの内容を変更する場合はこのファイルを編集し、js/version.js のバージョンも更新すること。
 window.LUCKYBOX_CARDS = {
-  cardsByRound: {"tutorial": ["Tutorial"], "round1": ["G11", "GX6", "GX5", "G22", "G33", "G34"], "round2": ["BX5", "B11", "B22", "BX6", "B23", "B34"], "round3": ["R11", "RX2"], "round4": ["Last", "LastSP"]},
+  cardsByRound: {"tutorial": ["Tutorial"], "round1": ["G123", "G456", "G789a", "G789b", "G123x", "G456x"], "round2": ["B123", "B456", "B789", "B123x", "B789x"], "round3": ["R789", "R4X4a", "R4X4b"], "round4": ["Last", "LastSP"]},
   cards: {
     "Tutorial": {
       "card_id": "Tutorial",
@@ -11,117 +11,135 @@ window.LUCKYBOX_CARDS = {
       "row_bonuses": ["wildcard", "star", ["lightning", "lightning"]],
       "col_bonuses": ["number_2", "moon", "number_6"]
     },
-    "G11": {
-      "card_id": "G11",
+    "G123": {
+      "card_id": "G123",
       "size": [3, 3],
       "display_grid": [[1, 2, 3], [2, 3, 1], [7, 8, 9]],
       "merged_groups": [],
       "row_bonuses": ["number_6", "number_5", "number_4"],
-      "col_bonuses": ["number_9", "moon", "number_8"]
+      "col_bonuses": ["star", "moon", "star"]
     },
-    "GX6": {
-      "card_id": "GX6",
-      "size": [3, 3],
-      "display_grid": [[1, 2, 3], [4, 5, 6], [5, 6, 4]],
-      "merged_groups": [],
-      "row_bonuses": ["number_7", "number_9", "number_8"],
-      "col_bonuses": ["number_2", "number_1", ["lightning", "lightning"]]
-    },
-    "GX5": {
-      "card_id": "GX5",
-      "size": [3, 3],
-      "display_grid": [[1, 2, 3], [2, 3, 1], [4, 5, 6]],
-      "merged_groups": [],
-      "row_bonuses": ["number_7", "number_8", "number_9"],
-      "col_bonuses": ["moon", "star", "star"]
-    },
-    "G22": {
-      "card_id": "G22",
+    "G456": {
+      "card_id": "G456",
       "size": [3, 3],
       "display_grid": [[4, 5, 6], [6, 4, 5], [7, 8, 9]],
       "merged_groups": [],
       "row_bonuses": ["number_3", "number_2", "number_1"],
       "col_bonuses": ["moon", "star", "moon"]
     },
-    "G33": {
-      "card_id": "G33",
+    "G789a": {
+      "card_id": "G789a",
       "size": [3, 3],
       "display_grid": [[1, 2, 3], [7, 8, 9], [9, 7, 8]],
       "merged_groups": [],
       "row_bonuses": ["number_6", "number_4", "number_5"],
-      "col_bonuses": ["number_3", "star", "number_1"]
+      "col_bonuses": ["star", "star", ["lightning", "lightning"]]
     },
-    "G34": {
-      "card_id": "G34",
+    "G789b": {
+      "card_id": "G789b",
       "size": [3, 3],
       "display_grid": [[4, 5, 6], [7, 8, 9], [9, 7, 8]],
       "merged_groups": [],
       "row_bonuses": ["number_3", "number_2", "number_1"],
       "col_bonuses": [["lightning", "lightning"], "moon", ["lightning", "lightning"]]
     },
-    "BX5": {
-      "card_id": "BX5",
+    "G123x": {
+      "card_id": "G123x",
       "size": [3, 3],
-      "display_grid": [[1, 2, 3], [2, 3, 1], [7, 8, 9]],
+      "display_grid": [[1, 2, 3], [2, 3, 1], [4, 5, 6]],
       "merged_groups": [],
-      "row_bonuses": ["number_4", "number_6", "number_5"],
-      "col_bonuses": ["number_9", "number_7", "number_8"]
+      "row_bonuses": ["number_7", "number_8", "number_9"],
+      "col_bonuses": ["number_5", "number_6", "number_4"]
     },
-    "B11": {
-      "card_id": "B11",
+    "G456x": {
+      "card_id": "G456x",
+      "size": [3, 3],
+      "display_grid": [[1, 2, 3], [4, 5, 6], [5, 6, 4]],
+      "merged_groups": [],
+      "row_bonuses": ["number_7", "number_9", "number_8"],
+      "col_bonuses": ["number_3", "number_1", "number_2"]
+    },
+    "B123": {
+      "card_id": "B123",
       "size": [3, 3],
       "display_grid": [[1, 2, 3], [3, 1, 2], [4, 5, 6]],
       "merged_groups": [],
-      "row_bonuses": ["number_9", "wildcard", "lightning"],
+      "row_bonuses": ["wildcard", "number_9", "lightning"],
       "col_bonuses": ["star", "star", "lightning"]
     },
-    "B22": {
-      "card_id": "B22",
-      "size": [3, 3],
-      "display_grid": [[4, 5, 6], [6, 4, 5], [7, 8, 9]],
-      "merged_groups": [],
-      "row_bonuses": ["number_3", "number_2", "number_1"],
-      "col_bonuses": ["number_8", "number_9", "number_7"]
-    },
-    "BX6": {
-      "card_id": "BX6",
-      "size": [3, 3],
-      "display_grid": [[4, 5, 6], [7, 8, 9], [8, 9, 7]],
-      "merged_groups": [],
-      "row_bonuses": ["number_1", "number_2", "number_3"],
-      "col_bonuses": ["number_6", "number_4", "number_5"]
-    },
-    "B23": {
-      "card_id": "B23",
+    "B456": {
+      "card_id": "B456",
       "size": [3, 3],
       "display_grid": [[1, 2, 3], [4, 5, 6], [5, 6, 4]],
       "merged_groups": [],
       "row_bonuses": ["lightning", "wildcard", "number_7"],
       "col_bonuses": ["moon", "moon", "lightning"]
     },
-    "B34": {
-      "card_id": "B34",
+    "B789": {
+      "card_id": "B789",
       "size": [3, 3],
       "display_grid": [[1, 2, 3], [7, 8, 9], [9, 7, 8]],
       "merged_groups": [],
-      "row_bonuses": ["lightning", "number_6", "wildcard"],
+      "row_bonuses": ["number_8", "lightning", "wildcard"],
       "col_bonuses": ["star", "lightning", ["lightning", "lightning"]]
     },
-    "R11": {
-      "card_id": "R11",
+    "B123x": {
+      "card_id": "B123x",
+      "size": [3, 3],
+      "display_grid": [[1, 2, 3], [2, 3, 1], [7, 8, 9]],
+      "merged_groups": [],
+      "row_bonuses": ["moon", "moon", "moon"],
+      "col_bonuses": ["moon", "moon", "wildcard"]
+    },
+    "B789x": {
+      "card_id": "B789x",
+      "size": [3, 3],
+      "display_grid": [[4, 5, 6], [6, 4, 5], [8, 9, 7]],
+      "merged_groups": [],
+      "row_bonuses": ["moon", "wildcard", "moon"],
+      "col_bonuses": ["star", ["lightning", "lightning"], "star"]
+    },
+    "R789": {
+      "card_id": "R789",
+      "size": [3, 3],
+      "display_grid": [[4, 5, 6], [7, 8, 9], [8, 9, 7]],
+      "merged_groups": [],
+      "row_bonuses": ["star", "star", "star"],
+      "col_bonuses": ["wildcard", "star", "star"]
+    },
+    "R4X4a": {
+      "card_id": "R4X4a",
       "size": [4, 4],
       "display_grid": [[3, 1, 2, 3], [4, 0, 0, 5], [9, 0, 0, 6], [3, 8, 7, 3]],
       "merged_groups": [{"display_value": 0, "cells": [[1, 1], [1, 2], [2, 1], [2, 2]]}],
-      "row_bonuses": [["moon", "moon"], "wildcard", "wildcard", ["lightning", "lightning", "lightning", "lightning"]],
-      "col_bonuses": [["star", "star"], "wildcard", "wildcard", ["lightning", "lightning", "lightning", "lightning"]]
+      "row_bonuses": [
+        ["moon", "moon"],
+        "wildcard",
+        "wildcard",
+        ["lightning", "lightning", "lightning", "lightning"]
+      ],
+      "col_bonuses": [
+        ["star", "star"],
+        "wildcard",
+        "wildcard",
+        ["lightning", "lightning", "lightning", "lightning"]
+      ]
     },
-    "RX2": {
-      "card_id": "RX2",
+    "R4X4b": {
+      "card_id": "R4X4b",
       "size": [4, 4],
       "display_grid": [[1, 2, 3, 4], [5, 6, 0, 0], [0, 0, 0, 0], [0, 0, 7, 8]],
-      "merged_groups": [{"display_value": 0, "cells": [[1, 2], [1, 3], [2, 2], [2, 3]]}, {"display_value": 0, "cells": [[2, 0], [2, 1], [3, 0], [3, 1]]}],
+      "merged_groups": [
+        {"display_value": 0, "cells": [[1, 2], [1, 3], [2, 2], [2, 3]]},
+        {"display_value": 0, "cells": [[2, 0], [2, 1], [3, 0], [3, 1]]}
+      ],
       "row_bonuses": ["wildcard", "star", "star", "moon"],
-      "col_bonuses": ["moon", "wildcard", ["lightning", "lightning"], ["lightning", "lightning"]]
+      "col_bonuses": [
+        "moon",
+        "wildcard",
+        ["lightning", "lightning"],
+        ["lightning", "lightning"]
+      ]
     },
     "Last": {
       "card_id": "Last",
