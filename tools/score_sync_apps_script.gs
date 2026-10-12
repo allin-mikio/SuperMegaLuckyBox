@@ -1,15 +1,18 @@
 /**
  * SuperMegaLuckyBox — Scores 集計用 Google Apps Script
  *
- * Scores 列（スクショ準拠）:
+ * Scores 列:
  *  A team | B 盤面点 | C トークン点 | D 総合点(月除く)[数式]
- *  E 月Ex | F 月数 | G 月順位[数式] | H 月点[数式]
- *  I 総合点(月含む)[数式] | J (空き) | K updated_at
+ *  E 月Ex | F 月数 | G 月数順位[数式] | H 月点[数式]
+ *  I 総合点(月含む)[数式] | J 総合順位[数式] | K updated_at
+ *  M〜O 順位表: 総合順位 / 総合点(月含む) / team（総合順位で昇順ソート）
  *
  * アプリが書くのは A,B,C,E,F,K のみ。
- * 月点は MoonPts（順位 × Ex有無）を参照。
+ * 月数順位は「team がある行だけ」の月数で順位付け（空行の 0 を巻き込まない）。
+ * 月点は MoonPts（順位 × Ex有無）。総合順位は 総合点(月含む) の順位。
  *
  * コード更新後: デプロイを管理 → 編集 → 新バージョン → デプロイ
+ * （数式列は送信のたびに正しい式へ上書きする）
  */
 
 var SHEET_NAME = 'Scores';
@@ -96,31 +99,50 @@ function ensureLayout_(sheet, startRow) {
   if (!String(sheet.getRange(1, 1).getValue() || '')) {
     sheet.getRange(1, 1, 1, 11).setValues([[
       'team', '盤面点', 'トークン点', '総合点(月除く)',
-      '月Ex', '月数', '月順位', '月点',
-      '総合点(月含む)', '', 'updated_at',
+      '月Ex', '月数', '月数順位', '月点',
+      '総合点(月含む)', '総合順位', 'updated_at',
     ]]);
   }
 
   var endRow = startRow + TEAM_COUNT - 1;
+  var teamRange = '$A$' + startRow + ':$A$' + endRow;
   var moonCountRange = '$F$' + startRow + ':$F$' + endRow;
+  var totalRange = '$I$' + startRow + ':$I$' + endRow;
   var moonTable = MOON_SHEET + '!$A$2:$C$9';
 
   for (var r = startRow; r <= endRow; r++) {
     // D 総合点(月除く) = 盤面 + トークン
     var d = '=IF(A' + r + '="","",B' + r + '+C' + r + ')';
-    // G 月順位（月数が多いほど上位）
-    var g = '=IF(A' + r + '="","",IFERROR(RANK(F' + r + ',' + moonCountRange + ',0),""))';
-    // H 月点 = MoonPts の順位行 × Ex列（E=1 なら ex有=3列目、否则 2列目）
+    // G 月数順位: team がある行だけを対象に、月数が多いほど上位（同率は同順）
+    var g =
+      '=IF(A' + r + '="","",COUNTIFS(' + teamRange + ',"<>",' + moonCountRange + ',">"&F' + r + ')+1)';
+    // H 月点 = MoonPts（Ex有→3列目 / Ex無→2列目）
     var h =
-      '=IF(G' + r + '="","",IFERROR(VLOOKUP(G' + r + ',' + moonTable + ',IF(OR(E' + r + '=1,E' + r + '=TRUE),3,2),FALSE),0))';
+      '=IF(OR(A' + r + '="",G' + r + '=""),"",IFERROR(VLOOKUP(G' + r + ',' + moonTable + ',IF(OR(E' + r + '=1,E' + r + '=TRUE),3,2),FALSE),0))';
     // I 総合点(月含む)
     var i = '=IF(A' + r + '="","",IFERROR(D' + r + '+H' + r + ',D' + r + '))';
+    // J 総合順位: 総合点(月含む) が多いほど上位
+    var j =
+      '=IF(A' + r + '="","",COUNTIFS(' + teamRange + ',"<>",' + totalRange + ',">"&I' + r + ')+1)';
 
-    if (!sheet.getRange(r, 4).getFormula()) sheet.getRange(r, 4).setFormula(d);
-    if (!sheet.getRange(r, 7).getFormula()) sheet.getRange(r, 7).setFormula(g);
-    if (!sheet.getRange(r, 8).getFormula()) sheet.getRange(r, 8).setFormula(h);
-    if (!sheet.getRange(r, 9).getFormula()) sheet.getRange(r, 9).setFormula(i);
+    // 数式列は毎回正しい式で上書き（古い誤式が残るのを防ぐ）
+    sheet.getRange(r, 4).setFormula(d);
+    sheet.getRange(r, 7).setFormula(g);
+    sheet.getRange(r, 8).setFormula(h);
+    sheet.getRange(r, 9).setFormula(i);
+    sheet.getRange(r, 10).setFormula(j);
   }
+
+  // M〜O: 総合順位 | 総合点(月含む) | team（ヘッダー M1:O1 は触らない）
+  if (!String(sheet.getRange(1, 13).getValue() || '')) {
+    sheet.getRange(1, 13, 1, 3).setValues([['総合順位', '総合点(月含む)', 'team']]);
+  }
+  var rankRange = '$J$' + startRow + ':$J$' + endRow;
+  var sortTable =
+    '=IFERROR(SORT(FILTER({' +
+    rankRange + ',' + totalRange + ',' + teamRange +
+    '},' + teamRange + '<>""),1,TRUE),"")';
+  sheet.getRange(startRow, 13).setFormula(sortTable);
 }
 
 function jsonOut(obj) {
