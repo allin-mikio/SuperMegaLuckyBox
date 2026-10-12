@@ -29,6 +29,28 @@
 .bingo-card[data-round="round3"] .card-header { background: #FF6565 !important; }
 .bingo-card[data-round="round4"] .card-header { background: #7030A0 !important; }
 
+/* LBカード（×付き4枚のみ）: 上紫・下がラウンド色（実物の LUCKY BOX CARD 帯） */
+.bingo-card[data-card-id="G123x"] .card-header,
+.bingo-card[data-card-id="G456x"] .card-header {
+    background: linear-gradient(
+        to bottom,
+        #7030A0 0%,
+        #7030A0 50%,
+        #00B050 50%,
+        #00B050 100%
+    ) !important;
+}
+.bingo-card[data-card-id="B123x"] .card-header,
+.bingo-card[data-card-id="B789x"] .card-header {
+    background: linear-gradient(
+        to bottom,
+        #7030A0 0%,
+        #7030A0 50%,
+        #40AFFF 50%,
+        #40AFFF 100%
+    ) !important;
+}
+
 /* 盤面の枠（紫）とマス（ほぼ白） */
 .bingo-card .bingo-grid {
     background: #7030A0 !important;
@@ -40,8 +62,8 @@
 }
 
 /*
- * 数字: 実物のように、赤〜オレンジのグラデーションに、青いふち取り。
- * （グラデーションを文字の形で切り抜き、まわりに青い影を重ねてふち取りにしている）
+ * 数字: 赤〜オレンジのグラデ＋青いふち取り（実物寄り）。
+ * グラデを文字で切り抜き、filter の drop-shadow で青縁（以前の見た目）。
  */
 .bingo-card .cell-number,
 .bingo-card .bonus-cell .bonus-icon--number,
@@ -50,7 +72,10 @@
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
     font-weight: 900 !important;
+    text-shadow: none !important;
+    -webkit-text-stroke: 0 transparent !important;
     filter:
         drop-shadow(0.03em 0 0 #1B62B8)
         drop-shadow(-0.03em 0 0 #1B62B8)
@@ -71,7 +96,10 @@
 .bingo-card .bingo-cell.marked .cell-number {
     background: none !important;
     -webkit-text-fill-color: #E0E0E0 !important;
+    color: #E0E0E0 !important;
     filter: none !important;
+    text-shadow: none !important;
+    -webkit-text-stroke: 0 transparent !important;
 }
 
 /* ボーナスのマス: 紫の枠。数字・？の待機中は盤面と同じ白 */

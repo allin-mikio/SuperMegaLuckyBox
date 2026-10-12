@@ -1300,7 +1300,7 @@ class LuckyBoxUI {
             : '';
 
         return `
-            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-round="${this.getCardRound(card.card_id)}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
+            <div class="bingo-card size-${colCount}${disableInteractions ? ' completed-card' : ''}${stickerEditing ? ' sticker-editing' : ''}" data-round="${this.getCardRound(card.card_id)}" data-card-id="${card.card_id}" data-card-index="${cardIndex !== null ? cardIndex : ''}">
                 <div class="card-header">LBカード ${card.card_id}</div>
                 ${stickerToolsHtml}
                 <div class="card-content">
