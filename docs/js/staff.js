@@ -1,8 +1,11 @@
 /*
  * スタッフモード / ユーザーモードの切り替え
  *
- *  - 起動直後は必ずユーザーモード（スタッフモードの状態は保存しない）
+ *  - 画面の流れ: タイトル画面 → スタッフモード ←→ ユーザーモード
+ *    タイトル画面は、初回起動時とオールリセット後に表示する（スタッフモードに入るまで続く）
+ *  - 起動直後は、タイトル画面でなければユーザーモード（スタッフモードの状態は保存しない）
  *  - スタッフモードへ入る: 画面右上のバージョン表示（ver.x.xx.xx）を長押し → 暗証番号を入力
+ *    （タイトル画面にも同じバージョン表示があり、同じ操作で入る）
  *  - スタッフモードから戻る: ①帯の「ユーザーモードに戻る」ボタン（手動）
  *                            ②一定時間操作がなければ自動で戻る
  *  - スタッフ専用の部品は、HTML側で class="staff-only" を付けたもの
@@ -22,8 +25,9 @@
   const config = { idleMs: 1 * 60 * 1000 };
 
   const body = document.body;
-  // 長押しする場所（右上のバージョン表示）
-  const title = document.querySelector('.version-badge');
+  // 長押しする場所（右上のバージョン表示。本体側とタイトル画面側の両方）
+  const badges = document.querySelectorAll('.version-badge');
+  const titleScreen = document.getElementById('title-screen');
   const banner = document.getElementById('staff-banner');
   const countdown = document.getElementById('staff-countdown');
   const exitBtn = document.getElementById('staff-exit-btn');
@@ -39,6 +43,55 @@
   let isStaff = false;
   let deadline = 0;
   let tickTimer = null;
+
+  /* ---------------- タイトル画面 ----------------
+   *  初期化時（初回起動）・オールリセット時に表示する。
+   *  タイトル画面 → （バージョン長押し + 暗証番号）→ スタッフモード ←→ ユーザーモード
+   *  スタッフモードに入るまでは、再読み込みしてもタイトル画面のまま。
+   */
+  const TITLE_KEY = 'luckybox.title.v1'; // 'pending' = 表示する / 'done' = 表示済み
+
+  function readTitleFlag() {
+    try {
+      return window.localStorage.getItem(TITLE_KEY);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeTitleFlag(value) {
+    try {
+      window.localStorage.setItem(TITLE_KEY, value);
+    } catch (err) {
+      // 保存できなくても動作は続ける
+    }
+  }
+
+  function setTitleVisible(on) {
+    titleScreen.hidden = !on;
+    body.classList.toggle('title-active', on);
+    if (on) window.scrollTo(0, 0);
+  }
+
+  function shouldShowTitleAtStartup() {
+    const flag = readTitleFlag();
+    if (flag === 'pending') return true;
+    if (flag === 'done') return false;
+    // 記録がないとき: 保存済みのゲームが無い（初回起動）場合だけ表示する。
+    // すでに進行中のゲームがある端末を更新したときに、いきなりタイトルが出ないようにする。
+    try {
+      return !window.LuckyBoxEngine.getApi().restored;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function showTitle() {
+    setStaffMode(false);
+    closePinDialog();
+    writeTitleFlag('pending');
+    setTitleVisible(true);
+  }
 
   /* ---------------- モード切り替え ---------------- */
   function setStaffMode(on) {
@@ -148,6 +201,9 @@
     if (overlay.hidden) return;
     if (pinInput.value === STAFF_PIN) {
       closePinDialog();
+      // タイトル画面からの場合は、ここでタイトル画面を終える
+      writeTitleFlag('done');
+      setTitleVisible(false);
       setStaffMode(true);
     } else {
       pinError.hidden = false;
@@ -184,33 +240,41 @@
     pressStart = null;
   }
 
-  title.addEventListener('pointerdown', (event) => {
-    if (isStaff) return;
-    pressStart = { x: event.clientX, y: event.clientY };
-    clearTimeout(pressTimer);
-    pressTimer = setTimeout(() => {
-      pressTimer = null;
-      openPinDialog();
-    }, LONG_PRESS_MS);
+  badges.forEach((badge) => {
+    badge.addEventListener('pointerdown', (event) => {
+      if (isStaff) return;
+      pressStart = { x: event.clientX, y: event.clientY };
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        openPinDialog();
+      }, LONG_PRESS_MS);
+    });
+
+    badge.addEventListener('pointermove', (event) => {
+      // 指が大きくずれたら（スクロール操作など）長押しではないとみなす
+      if (!pressStart) return;
+      const dx = event.clientX - pressStart.x;
+      const dy = event.clientY - pressStart.y;
+      if (dx * dx + dy * dy > 20 * 20) cancelPress();
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => badge.addEventListener(type, cancelPress));
+
+    // 長押し時の文字選択・コンテキストメニューを出さない
+    badge.addEventListener('contextmenu', (event) => event.preventDefault());
   });
-
-  title.addEventListener('pointermove', (event) => {
-    // 指が大きくずれたら（スクロール操作など）長押しではないとみなす
-    if (!pressStart) return;
-    const dx = event.clientX - pressStart.x;
-    const dy = event.clientY - pressStart.y;
-    if (dx * dx + dy * dy > 20 * 20) cancelPress();
-  });
-
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => title.addEventListener(type, cancelPress));
-
-  // 長押し時の文字選択・コンテキストメニューを出さない
-  title.addEventListener('contextmenu', (event) => event.preventDefault());
 
   /* ---------------- 公開（テスト・他スクリプト用） ---------------- */
   window.StaffMode = {
     isStaff: () => isStaff,
     exit: () => setStaffMode(false),
+    // オールリセット後に game.js から呼ぶ。スタッフモードを終えてタイトル画面へ戻る
+    showTitle,
+    isTitleShown: () => !titleScreen.hidden,
     config,
   };
+
+  // 起動時: 初回起動、またはリセット後でスタッフモードに入っていなければタイトル画面から始める
+  if (shouldShowTitleAtStartup()) setTitleVisible(true);
 })();

@@ -1013,6 +1013,11 @@ class LuckyBoxUI {
 
                 this.updateDisplay();
                 await this.loadRoundCards();
+
+                // オールリセット後は、スタッフモードを終えてタイトル画面へ戻る
+                if (window.StaffMode && typeof window.StaffMode.showTitle === 'function') {
+                    window.StaffMode.showTitle();
+                }
             } else {
                 console.error('Reset失敗:', result.error);
                 alert(`Reset失敗: ${result.error}`);
@@ -1672,6 +1677,10 @@ class LuckyBoxUI {
         const versionEl = document.getElementById('app-version');
         if (versionEl && typeof APP_VERSION !== 'undefined') {
             versionEl.textContent = APP_VERSION;
+        }
+        const titleVersionEl = document.getElementById('title-version');
+        if (titleVersionEl && typeof APP_VERSION !== 'undefined') {
+            titleVersionEl.textContent = APP_VERSION;
         }
 
         const api = window.LuckyBoxEngine.getApi();
