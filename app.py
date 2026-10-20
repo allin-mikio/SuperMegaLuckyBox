@@ -879,6 +879,9 @@ class LuckyBoxGame:
         for card in list(self.cards) + list(self.completed_cards):
             if not card or card.card_id in seen:
                 continue
+            # チュートリアルカードは、コンプリートへ送ったあと（self.cards から外れたあと）は得点に入れない
+            if card.card_id == 'Tutorial' and card not in self.cards:
+                continue
             if not card.is_complete():
                 continue
             seen.add(card.card_id)

@@ -681,7 +681,11 @@
         if (Object.prototype.hasOwnProperty.call(counts, size)) counts[size] += 1;
       };
       this.cards.forEach(addComplete);
-      this.completed_cards.forEach(addComplete);
+      // チュートリアルカードは、コンプリートへ送ったあとは得点に入れない
+      this.completed_cards.forEach((card) => {
+        if (card && card.card_id === 'Tutorial') return;
+        addComplete(card);
+      });
 
       const row = {
         3: counts[3] * unit[3],

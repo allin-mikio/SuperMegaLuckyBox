@@ -1200,7 +1200,9 @@ class LuckyBoxUI {
             // コンプリートのプールに入っていて、かつ「Complete」ボタンでカレントから外されたカードだけを表示する
             // （全マスが埋まっただけで、まだボタンを押していないカードは、盤面に残っている）
             const activeIds = new Set((this.gameState.cards || []).map((c) => c.card_id));
-            const cards = (this.gameState.completed_cards || []).filter((c) => !activeIds.has(c.card_id));
+            // チュートリアルカードは、コンプリートへ送っても、ここには表示しない
+            const cards = (this.gameState.completed_cards || [])
+                .filter((c) => !activeIds.has(c.card_id) && c.card_id !== 'Tutorial');
             this.completedCards = cards;
 
             if (!cards.length) {
