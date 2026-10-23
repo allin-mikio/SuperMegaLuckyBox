@@ -72,11 +72,11 @@
 
                 <div class="card-management-controls">
                     <select id="round-select" aria-label="ラウンド選択">
-                        <option value="tutorial">チュートリアル</option>
-                        <option value="round1">ラウンド1</option>
-                        <option value="round2">ラウンド2</option>
-                        <option value="round3">ラウンド3</option>
-                        <option value="round4">ラウンド4</option>
+                        <option value="tutorial">チュートリアルカード</option>
+                        <option value="round1">ラウンド1カード</option>
+                        <option value="round2">ラウンド2カード</option>
+                        <option value="round3">ラウンド3カード</option>
+                        <option value="round4">ラウンド4カード</option>
                     </select>
 
                     <select id="card-id" aria-label="カードID選択"></select>
@@ -137,8 +137,33 @@
             <!-- Undo / オールリセット（雷トレイの増減で位置が動かないよう、Bingo Cards の上に固定） -->
             <section class="board-actions" aria-label="盤面操作">
                 <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
+                <!-- 進捗（チュートリアル → ラウンド1〜4）。「ラウンド終了」ボタンで進む -->
+                <div id="progress-label" class="progress-label" aria-live="polite">チュートリアル</div>
                 <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
             </section>
+
+            <!-- 星・月の獲得数（ビンゴ・謎解きで増えたぶんを自動で数える。雷は、下の Bingo Cards 見出しの右）。
+                 星はいまのラウンドの数（ラウンド終了で 0 に戻る）。「−／＋」と「ラウンド終了」はスタッフモードのみ -->
+            <div id="token-hud" class="token-hud" aria-label="星・月の獲得数">
+                <div class="token-hud-item">
+                    <span id="hud-star-icon" class="token-hud-icon"></span>
+                    <span id="hud-star-count" class="token-hud-count">0</span>
+                    <span class="token-hud-adjust staff-only">
+                        <button type="button" class="token-hud-btn" data-hud-adjust="star" data-amount="-1" aria-label="星を1つ減らす">−</button>
+                        <button type="button" class="token-hud-btn" data-hud-adjust="star" data-amount="1" aria-label="星を1つ増やす">＋</button>
+                    </span>
+                </div>
+                <div class="token-hud-item">
+                    <span id="hud-moon-icon" class="token-hud-icon"></span>
+                    <span id="hud-moon-count" class="token-hud-count">0</span>
+                    <span class="token-hud-adjust staff-only">
+                        <button type="button" class="token-hud-btn" data-hud-adjust="moon" data-amount="-1" aria-label="月を1つ減らす">−</button>
+                        <button type="button" class="token-hud-btn" data-hud-adjust="moon" data-amount="1" aria-label="月を1つ増やす">＋</button>
+                    </span>
+                </div>
+                <button id="round-end-btn" class="btn btn-warning btn-inline staff-only" type="button">チュートリアル終了</button>
+                <span id="round-end-status" class="round-end-status staff-only" aria-live="polite"></span>
+            </div>
 
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">

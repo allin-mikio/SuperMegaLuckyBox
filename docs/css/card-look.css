@@ -262,3 +262,105 @@
     outline: 4px solid #1B62B8 !important;
     outline-offset: -4px;
 }
+
+/* 星・月の獲得数（ユーザーモードでも見える）。スタッフモードでは「−／＋」と「ラウンド終了」も出る */
+.token-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin: 8px 0;
+}
+
+.token-hud-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px 4px 6px;
+    border: 3px solid #7030A0;
+    border-radius: 10px;
+    background: #FFFFF4;
+}
+
+.token-hud-icon svg {
+    display: block;
+    width: 32px;
+    height: 32px;
+}
+
+.token-hud-label {
+    font-size: 0.85rem;
+    color: #4B0082;
+}
+
+.token-hud-count {
+    min-width: 1.4em;
+    font-size: 1.6rem;
+    font-weight: bold;
+    line-height: 1;
+    text-align: center;
+    color: #333;
+}
+
+.token-hud-adjust {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 4px;
+}
+
+.token-hud-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #4B0082;
+    border-radius: 8px;
+    background: #FFFFFF;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #4B0082;
+    cursor: pointer;
+}
+
+.token-hud-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* 得点欄の個数（星・雷・月）は、自動で数えるので、押せない表示用 */
+.score-sheet-input:disabled {
+    opacity: 1;
+    color: #333;
+    background: #EEF3E6;
+    -webkit-text-fill-color: #333;
+    cursor: default;
+}
+
+/* 進捗表示（Undo の右）: チュートリアル／ラウンド1〜4 */
+.progress-label {
+    margin-left: 8px;
+    font-size: 1.8rem;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #4B0082;
+    white-space: nowrap;
+}
+
+/* ラウンド終了ボタンのそばに出す、スプシ送信の結果 */
+.round-end-status {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #1B5E20;
+}
+
+.round-end-status.is-error {
+    color: #B71C1C;
+}
+
+/* 星の Ex は R4 のみ。R1〜R3 は押せない表示（位置はそろえたまま、うすくする） */
+.score-ex-check.is-disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.score-ex-check.is-disabled input {
+    cursor: not-allowed;
+}

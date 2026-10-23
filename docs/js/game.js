@@ -13,6 +13,7 @@ class LuckyBoxUI {
         this.setupTeamSelect();
         this.setupScoreInputs();
         this.setupScoreSubmit();
+        this.setupTokenHud();
         // スタッフモードを終えたら、シール編集も終える
         document.addEventListener('staffmodechange', (event) => {
             if (!event.detail.on && this.stickerEdit) {
@@ -261,6 +262,126 @@ class LuckyBoxUI {
         tray.innerHTML = icons + countLabel + add;
     }
 
+    /* ---------------- 星・月の表示（ユーザーモードでも見える）とラウンド終了 ---------------- */
+    // 星: いまのラウンドの獲得数（ラウンド終了で 0 に戻る）。月: 獲得数の合計。
+    // スタッフモードでは、謎解きパートで増えた分を入力する「−／＋」と、「ラウンド終了」ボタンも出る。
+    setupTokenHud() {
+        const hud = document.getElementById('token-hud');
+        if (!hud) return;
+
+        const starIcon = document.getElementById('hud-star-icon');
+        const moonIcon = document.getElementById('hud-moon-icon');
+        if (starIcon) starIcon.innerHTML = this.getBonusIcon('star');
+        if (moonIcon) moonIcon.innerHTML = this.getBonusIcon('moon');
+
+        hud.addEventListener('click', (event) => {
+            const adjustBtn = event.target.closest('[data-hud-adjust]');
+            if (adjustBtn) {
+                this.adjustTokens(adjustBtn.dataset.hudAdjust, Number(adjustBtn.dataset.amount));
+                return;
+            }
+            if (event.target.closest('#round-end-btn')) {
+                this.endRound();
+            }
+        });
+    }
+
+    renderTokenHud() {
+        if (!this.gameState) return;
+        const star = this.gameState.star_tokens || 0;
+        const moon = this.gameState.moon_tokens || 0;
+        // round_num: 0 = チュートリアル中、1〜4 = ラウンド1〜4、5 = 全ラウンド終了
+        const round = this.gameState.round_num ?? 1;
+        const finished = round > 4;
+        const tutorial = round === 0;
+
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el && el.textContent !== String(value)) el.textContent = value;
+        };
+        setText('hud-star-count', star);
+        setText('hud-moon-count', moon);
+        // 進捗が変わったら（「ラウンド終了」・Undo など）、カード追加のリストも、その進捗のカードに切り替える
+        // （例: 「ラウンド2 終了」を押すと、ラウンド3カードのリストになる）。最初の表示では切り替えない
+        if (this._progressRound !== undefined && this._progressRound !== round) {
+            this.syncRoundListToProgress(round);
+        }
+        this._progressRound = round;
+
+        // Scores の送信ボタンに、終えたラウンドを表示する（例: ラウンド2を終えたあとは「ラウンド2結果送信」）
+        const submitBtn = document.getElementById('score-submit-btn');
+        if (submitBtn) {
+            const finishedRound = Math.min(Math.max(round - 1, 0), 4);
+            const label = finishedRound >= 1 ? `ラウンド${finishedRound}結果送信` : '結果送信';
+            if (submitBtn.textContent !== label) submitBtn.textContent = label;
+        }
+
+        // 進捗（Undo の右）: チュートリアル → ラウンド1〜4 → 全ラウンド終了
+        setText('progress-label', finished ? '全ラウンド終了' : (tutorial ? 'チュートリアル' : `ラウンド${round}`));
+        const endBtn = document.getElementById('round-end-btn');
+        if (endBtn) {
+            endBtn.disabled = finished;
+            endBtn.textContent = finished ? 'ラウンド終了済み' : (tutorial ? 'チュートリアル終了' : `ラウンド${round} 終了`);
+        }
+        const starMinus = document.querySelector('[data-hud-adjust="star"][data-amount="-1"]');
+        const moonMinus = document.querySelector('[data-hud-adjust="moon"][data-amount="-1"]');
+        if (starMinus) starMinus.disabled = star <= 0;
+        if (moonMinus) moonMinus.disabled = moon <= 0;
+    }
+
+    // 進捗（0 = チュートリアル、1〜4 = ラウンド、5 = 全ラウンド終了）に対応するカードのリストへ切り替える
+    syncRoundListToProgress(round) {
+        const name = round <= 0 ? 'tutorial' : `round${Math.min(round, 4)}`;
+        if (this.currentRound === name) return;
+        this.currentRound = name;
+        const roundSelect = document.getElementById('round-select');
+        if (roundSelect) roundSelect.value = name;
+        this.saveUiState();
+        this.loadRoundCards();
+    }
+
+    // 「ラウンド終了」: いまのラウンドの星の数を記録して、星を 0 に戻し、次のラウンドへ進める（Undo で戻せる）
+    async endRound() {
+        if (!this.gameState) return;
+        const round = this.gameState.round_num ?? 1;
+        if (round > 4) return;
+        const star = this.gameState.star_tokens || 0;
+        const message = round === 0
+            ? 'チュートリアルを終了しますか？\n雷 4・星 0・月 0 に戻して、ラウンド1を始めます。'
+            : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します。`;
+        if (this._endingRound || !confirm(message)) return;
+
+        this._endingRound = true;
+        try {
+            const result = await this.apiCall('end_round', {});
+            if (result && result.success && result.game_state) {
+                this.gameState = result.game_state;
+                this.updateDisplays();
+                this.updateUiAfterHistoryOnly();
+            } else {
+                alert(`ラウンド終了に失敗しました: ${(result && result.error) || '不明なエラー'}`);
+                return;
+            }
+
+            // ラウンド1〜4の終了後は、更新された Scores をそのままスプシへ送信する（チュートリアル終了では送らない）
+            if (round >= 1) {
+                await this.submitScoreToSheet();
+                const statusEl = document.getElementById('score-submit-status');
+                // 送信の結果は、ボタンのそばにも表示する
+                const nearStatus = document.getElementById('round-end-status');
+                if (nearStatus && statusEl) {
+                    nearStatus.textContent = statusEl.textContent;
+                    nearStatus.classList.toggle('is-error', statusEl.classList.contains('is-error'));
+                }
+                if (statusEl && statusEl.classList.contains('is-error')) {
+                    alert(`ラウンド${round}は終了しましたが、スプシへの送信に失敗しました。\n${statusEl.textContent}\n（Scores の「結果送信」で再送信できます）`);
+                }
+            }
+        } finally {
+            this._endingRound = false;
+        }
+    }
+
     // トークンボタンの設定
     setupTokenButtons() {
         console.log('トークンボタン設定開始');
@@ -438,7 +559,8 @@ class LuckyBoxUI {
             
             if (result && result.game_state) {
                 this.gameState = result.game_state;
-                this.updateTokensDisplay();
+                // 得点欄（星・月・雷の個数）も自動で変わるので、スコア表示も更新する
+                this.updateDisplays();
                 this.updateUiAfterHistoryOnly();
             } else {
                 console.error('トークン調整失敗: レスポンスが空です');
@@ -621,12 +743,29 @@ class LuckyBoxUI {
             }
         });
 
+        // 星の Ex は R4 でしか取れないので、R1〜R3 のチェックは押せなくする（位置はそろえたまま、うすく表示）
+        ['score-star-r1-ex', 'score-star-r2-ex', 'score-star-r3-ex'].forEach((id) => {
+            const box = document.getElementById(id);
+            if (!box) return;
+            box.disabled = true;
+            box.title = '星の Ex はラウンド4のみ';
+            const label = box.closest('.score-ex-check');
+            if (label) label.classList.add('is-disabled');
+        });
+
+        // 個数（星・雷・月）は、獲得したぶんを自動で数えて表示する（スタッフが直すときは、画面上の「−／＋」で増減する）。
+        // ここでスタッフが入力するのは Ex の有無だけ
+        countIds.forEach((id) => {
+            const select = document.getElementById(id);
+            if (select) {
+                select.disabled = true;
+                select.title = '自動で数えています（星・月の「−／＋」、雷の「＋」で増減）';
+            }
+        });
+
         const save = async () => {
             const result = await this.apiCall('set_score_inputs', {
-                stars: [1, 2, 3, 4].map((r) => Number(document.getElementById(`score-star-r${r}`).value)),
                 star_ex: [1, 2, 3, 4].map((r) => document.getElementById(`score-star-r${r}-ex`).checked),
-                lightning: Number(document.getElementById('score-lightning-count').value),
-                moon: Number(document.getElementById('score-moon-count').value),
                 lightning_ex: document.getElementById('score-lightning-ex').checked,
                 moon_ex: document.getElementById('score-moon-ex').checked,
             });
@@ -1423,9 +1562,11 @@ class LuckyBoxUI {
                 .filter((item) => item === 'wildcard' || item.startsWith('number_'))
                 .map((item) => (item === 'wildcard' ? '?' : item.slice('number_'.length)));
             const valuesAttr = selectValues.length ? `data-bonus-values="${selectValues.join(',')}"` : '';
+            const tokenOnlyAttr = this.isTokenOnlyBonus(bonusItems) ? 'data-token-only="1"' : '';
             return `
                 <div class="bonus-cell ${type}-bonus ${bonusClass}${this.isMoonStarBonus(bonusItems) ? ' bonus-pink' : ''}" 
                      ${valuesAttr}
+                     ${tokenOnlyAttr}
                      data-card-index="${cardIndex !== null ? cardIndex : ''}" 
                      data-card-id="${card.card_id}"
                      data-bonus-key="${bonusKey}"
@@ -1663,12 +1804,16 @@ class LuckyBoxUI {
             return 'available';
         }
 
-        // 雷だけのマスは、ビンゴの瞬間に雷が自動で増えるので、最初からグレー（使用済み）にする。
-        // 月・星・数字・？のマスは、ビンゴが揃ったら「有効（タップ待ち）」にし、
-        // 運営が現物を渡す／ユーザーが使うときにタップしてグレーにする。
-        const allLightning = bonusItems.every(item => item === 'lightning');
+        // 雷・月・星だけのマスは、ビンゴの瞬間に個数が自動で増える（エンジンが数える）ので、
+        // 揃った時点でグレー（獲得済み）にする。タップでは切り替えない。
+        // 数字・？のマスは、ビンゴが揃ったら「有効（タップ待ち）」にし、ユーザーが使うときに選んでグレーにする。
+        return this.isTokenOnlyBonus(bonusItems) ? 'used' : 'available';
+    }
 
-        return allLightning ? 'used' : 'available';
+    // 雷・月・星だけのマスか（個数が自動で数えられるマス）
+    isTokenOnlyBonus(bonusItems) {
+        return Array.isArray(bonusItems) && bonusItems.length > 0
+            && bonusItems.every(item => item === 'lightning' || item === 'moon' || item === 'star');
     }
 
     // 月・星だけのマスか（有効時に、数字などの黄緑ではなく薄いピンクで表示する）
@@ -1746,6 +1891,7 @@ class LuckyBoxUI {
         // ボタンの有効/無効制御も更新
         this.updateTokenButtonStates();
         this.renderLightningTray();
+        this.renderTokenHud();
     }
 
     updateHistoryDisplay() {
@@ -1922,6 +2068,7 @@ class LuckyBoxUI {
         // トークンボタンの状態を更新
         this.updateTokenButtonStates();
         this.renderLightningTray();
+        this.renderTokenHud();
     }
 
     // ボーナスの状態を取得
@@ -1931,45 +2078,25 @@ class LuckyBoxUI {
         return card.used_bonuses[bonusKey] || '';
     }
 
-    // ボーナスセルの色をトグル（効果なし）
+    // ボーナス欄のタップ。
+    //   ・グレー（使用済み）になったマスは、雷・月・星も、数字・？も、タップしても何も起きない（戻すときは Undo）
+    //   ・雷・月・星だけのマスは、個数が自動で数えられ、揃うと自動でグレーになるので、タップでは何も起きない
+    //   ・揃った数字・？のマスは、タップで「選択」（押せるマスを明示）／もう一度タップで選択を解除
     toggleBonus(element) {
         const bonusKey = element.dataset.bonusKey;
-        const hasAvailable = element.classList.contains('available');
-        const hasUsed = element.classList.contains('used');
+        if (!bonusKey || !element.classList.contains('available')) return;
+        if (element.dataset.tokenOnly) return;
 
-        if (!bonusKey || (!hasAvailable && !hasUsed)) {
-            return;
-        }
+        if (element.dataset.bonusValues && this.toggleBonusSelection(element)) return;
 
-        // 揃った数字・？のボーナス欄は、タップで「選択」（押せるマスを明示）／もう一度タップで選択を解除。
-        // 押せるマスが1つもないときは、これまでどおり、タップで使用済み（グレー）にする。
-        if (hasAvailable && element.dataset.bonusValues) {
-            if (this.toggleBonusSelection(element)) return;
-        }
-
-        if (hasAvailable) {
-            element.classList.remove('available');
-            element.classList.add('used');
-            this.manualBonusStates.set(bonusKey, 'used');
-        } else {
-            element.classList.remove('used');
-            element.classList.add('available');
-            this.manualBonusStates.delete(bonusKey);
-        }
-
-        if (element.classList.contains('bonus-pink')) {
-            // 月・星のボーナス欄: グレーにする／ピンクに戻す操作そのものを、操作履歴に1件として残す。
-            // Undo は、この切り替えだけを取り消す（盤面のマスは戻らない）。
-            const [cardId, type, index] = bonusKey.split(':');
-            const place = `${type === 'row' ? '行' : '列'}${Number(index) + 1}`;
-            const label = hasAvailable
-                ? `ボーナス使用済み: ${cardId} ${place}`
-                : `ボーナス未使用に戻す: ${cardId} ${place}`;
-            this.saveBonusStates({ record: true, label });
-        } else {
-            // 数字・？のボーナス欄: 履歴には残さず、次の盤面の操作（マスのタップ）と一緒に Undo で戻る
-            this.saveBonusStates();
-        }
+        // 押せるマスが1つもないとき（数字・？を使える空きマスがない）だけ、タップで使用済み（グレー）にする。
+        // この操作は操作履歴に1件として残し、Undo で元に戻せる
+        element.classList.remove('available');
+        element.classList.add('used');
+        this.manualBonusStates.set(bonusKey, 'used');
+        const [cardId, type, index] = bonusKey.split(':');
+        const place = `${type === 'row' ? '行' : '列'}${Number(index) + 1}`;
+        this.saveBonusStates({ record: true, label: `ボーナス使用済み: ${cardId} ${place}` });
     }
 
     /* ---------------- 数字・？ボーナスの「押せるマス」 ---------------- */

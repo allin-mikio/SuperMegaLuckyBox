@@ -33,6 +33,18 @@
 
   const STAR_ROUND_COUNT = 4;
 
+  const defaultRoundStars = () => new Array(STAR_ROUND_COUNT).fill(0);
+
+  const normalizeRoundStars = (value) => {
+    const src = Array.isArray(value) ? value : [];
+    const out = [];
+    for (let i = 0; i < STAR_ROUND_COUNT; i++) {
+      const n = Number(src[i]);
+      out.push(Number.isInteger(n) && n > 0 ? n : 0);
+    }
+    return out;
+  };
+
   const defaultScoreInputs = () => ({
     // 星だけラウンド別（同一ラウンド内で得点確定）。Ex もラウンドごと
     stars: [0, 0, 0, 0],
@@ -350,7 +362,11 @@
       this.star_tokens = 0;
       this.score = 0;
       this.score_details = { completed_points: 0, active_black_cells: 0, active_points: 0, total: 0 };
-      this.round_num = 1;
+      // 0 = チュートリアル中、1〜4 = ラウンド1〜4、5 = 全ラウンド終了
+      this.round_num = 0;
+      // 終えたラウンドごとの星の獲得数（R1〜R4）。「ラウンド終了」で、そのラウンドの star_tokens を記録して star_tokens を 0 に戻す。
+      // 現在のラウンド（round_num）の分は、まだ star_tokens に入っている
+      this.round_stars = defaultRoundStars();
       // 画面でタップして「使用済み（グレー）」にしたボーナス欄のキー（例: "G11:row:0"）。
       // 操作履歴の各スナップショットにも含めるので、Undo すると、そのときの使用状態に戻る。
       this.bonus_states = [];
@@ -584,6 +600,7 @@
       if (completedLines.length) {
         const bonuses = card.getLineBonuses(completedLines);
         if (bonuses.length) {
+          // チュートリアルカードでも、トークン（雷・月・星）は増える（「チュートリアル終了」で初期値に戻る）
           this.processBonuses(bonuses, cardId);
 
           const tokenLabels = [['lightning', '雷'], ['moon', '月'], ['star', '星']];
@@ -649,6 +666,30 @@
       return true;
     }
 
+    // 「ラウンド終了」（スタッフ操作）。いまのラウンドの星の数を記録して、星を 0 に戻し、次のラウンドへ進む。
+    // チュートリアル中（round_num 0）は「チュートリアル終了」: 雷4・星0・月0に戻して、ラウンド1へ進む。
+    // R4 を終えると round_num は 5（全ラウンド終了）になる。Undo で戻せる
+    endRound() {
+      if (this.round_num > STAR_ROUND_COUNT) return false;
+      if (this.round_num === 0) {
+        this.lightning_tokens = 4;
+        this.moon_tokens = 0;
+        this.star_tokens = 0;
+        this.round_num = 1;
+        this.updateScore();
+        this.saveState('チュートリアル終了（雷4・星0・月0にリセット）');
+        return true;
+      }
+      const index = this.round_num - 1;
+      const count = this.star_tokens;
+      this.round_stars[index] = count;
+      this.star_tokens = 0;
+      this.round_num += 1;
+      this.updateScore();
+      this.saveState(`ラウンド${index + 1}終了（星 ${count}個を記録）`);
+      return true;
+    }
+
     /* ---- スコア ---- */
     // 盤面の一辺（3 / 4 / 5）。コンプリート点はサイズで変わる
     cardBoardSize(card) {
@@ -697,14 +738,23 @@
       const activePoints = Math.floor(activeBlackCells / 2);
       const boardPoints = completedPoints + activePoints;
 
+      // 星・月・雷の個数は、獲得したぶんを自動で数える（スタッフが入力するのは Ex の有無だけ）。
+      //   星: 終えたラウンドは round_stars、いまのラウンドは star_tokens
+      //   月・雷: 最終的な個数（moon_tokens / lightning_tokens）
       const inputs = cleanScoreInputs(this.score_inputs);
-      const starRounds = inputs.stars.map((count, i) => {
-        const ex = inputs.star_ex[i];
+      const starCounts = this.round_stars.map((recorded, i) =>
+        clampScoreCount(i === this.round_num - 1 ? this.star_tokens : recorded)
+      );
+      const moonCount = clampScoreCount(this.moon_tokens);
+      const lightningCount = clampScoreCount(this.lightning_tokens);
+      const starRounds = starCounts.map((count, i) => {
+        // 星の Ex は、仕様上 R4 でしか取れない（R1〜R3 は常に Ex なし）
+        const ex = i === STAR_ROUND_COUNT - 1 ? inputs.star_ex[i] : false;
         return { count, ex, points: starPoints(count, ex) };
       });
       const starPts = starRounds.reduce((sum, r) => sum + r.points, 0);
-      const starCount = inputs.stars.reduce((sum, n) => sum + n, 0);
-      const lightningPts = lightningPoints(inputs.lightning, inputs.lightning_ex);
+      const starCount = starCounts.reduce((sum, n) => sum + n, 0);
+      const lightningPts = lightningPoints(lightningCount, inputs.lightning_ex);
       const bonusPoints = starPts + lightningPts;
       const total = boardPoints + bonusPoints;
 
@@ -720,8 +770,8 @@
         active_points: activePoints,
         board_points: boardPoints,
         star: { count: starCount, points: starPts, rounds: starRounds },
-        lightning: { count: inputs.lightning, ex: inputs.lightning_ex, points: lightningPts },
-        moon: { count: inputs.moon, ex: inputs.moon_ex },
+        lightning: { count: lightningCount, ex: inputs.lightning_ex, points: lightningPts },
+        moon: { count: moonCount, ex: inputs.moon_ex },
         bonus_points: bonusPoints,
         total,
       };
@@ -750,6 +800,7 @@
         score: this.score,
         score_details: Object.assign({}, this.score_details),
         round_num: this.round_num,
+        round_stars: this.round_stars.slice(),
         bonus_states: this.bonus_states.slice(),
         team: this.team,
         score_inputs: cleanScoreInputs(this.score_inputs),
@@ -769,7 +820,7 @@
         this.moon_tokens === 0 &&
         this.star_tokens === 0 &&
         this.score === 0 &&
-        this.round_num === 1;
+        this.round_num === 0;
       if (isInitialState) return;
 
       this.history.push(state);
@@ -813,6 +864,7 @@
       this.star_tokens = state.star_tokens !== undefined ? state.star_tokens : 0;
       this.score = state.score !== undefined ? state.score : 0;
       this.round_num = state.round_num !== undefined ? state.round_num : 1;
+      this.round_stars = normalizeRoundStars(state.round_stars);
       this.bonus_states = Array.isArray(state.bonus_states) ? state.bonus_states.slice() : [];
 
       this.cards = [];
@@ -838,7 +890,8 @@
       this.star_tokens = 0;
       this.score = 0;
       this.score_details = { completed_points: 0, active_black_cells: 0, active_points: 0, total: 0 };
-      this.round_num = 1;
+      this.round_num = 0;
+      this.round_stars = defaultRoundStars();
       this.bonus_states = [];
       this.score_inputs = defaultScoreInputs();
       this.history = [];
@@ -902,6 +955,7 @@
         score: this.score,
         score_details: this.score_details,
         round_num: this.round_num,
+        round_stars: this.round_stars,
         can_undo: canUndo,
         can_redo: false,
         available_cards: availableCards,
@@ -1030,7 +1084,7 @@
   /* ------------------------------------------------------------------ */
   /* LocalApi: Flask の /api/* と同じ形式のレスポンスを返す                */
   /* ------------------------------------------------------------------ */
-  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers', 'set_team', 'set_score_inputs']);
+  const MUTATING = new Set(['add_card', 'mark_cell', 'undo', 'redo', 'reset', 'adjust_tokens', 'clear_history', 'set_bonus_states', 'complete_card', 'set_stickers', 'set_team', 'set_score_inputs', 'end_round']);
 
   function defaultStorage() {
     try {
@@ -1184,6 +1238,13 @@
       if (endpoint === 'set_score_inputs') {
         game.setScoreInputs(data || {});
         return { success: true, game_state: game.getGameState() };
+      }
+
+      if (endpoint === 'end_round') {
+        const success = game.endRound();
+        return success
+          ? { success: true, game_state: game.getGameState() }
+          : { success: false, error: 'すべてのラウンドが終了しています', game_state: game.getGameState() };
       }
 
       if (endpoint === 'set_team') {
