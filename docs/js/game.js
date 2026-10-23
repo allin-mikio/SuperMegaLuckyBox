@@ -5,6 +5,8 @@ class LuckyBoxUI {
         this.gameState = null;
         this.currentRound = 'tutorial';  // デフォルトラウンド
         this.manualBonusStates = new Map();
+        // 選択中の数字・？ボーナス { key, values }。選択中だけ、押せるマスを明示し、それ以外のマスは押せない
+        this.bonusSelection = null;
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
@@ -1036,12 +1038,25 @@ class LuckyBoxUI {
             return;
         }
 
+        // 数字・？のボーナスを選択中は、明示されたマス以外は押せない
+        if (this.bonusSelection) {
+            const cardEl = document.querySelector(`#cards-container .bingo-card[data-card-index="${cardIndex}"]`);
+            const cellEl = cardEl && cardEl.querySelector(`.bingo-cell[data-row="${row}"][data-col="${col}"]`);
+            if (!cellEl || !cellEl.classList.contains('bonus-target')) {
+                return;
+            }
+        }
+
         // 既に処理中の場合は何もしない
         if (this.isMarkingCell) {
             return;
         }
         
         this.isMarkingCell = true;
+
+        // 選択中のボーナスがあれば、このマスを押した時点で「使用済み」にする。
+        // マスのマークより先に保存して、Undo でマスと一緒に元へ戻るようにする
+        const consumedBonusKey = this.consumeBonusSelection();
 
         // 弱い端末向け: エンジン処理の前に黒塗りを見せて、タップ感を先に返す
         this.paintCellOptimistic(cardIndex, row, col);
@@ -1059,12 +1074,14 @@ class LuckyBoxUI {
                 this.updateAfterMark(cardIndex);
             } else {
                 // 楽観更新を取り消すため、盤面を正式状態で描き直す
+                this.revertBonusConsume(consumedBonusKey);
                 this.updateDisplay();
                 const errorMsg = result ? (result.error || '不明なエラー') : 'レスポンスが無効です';
                 console.error(`セルマーク失敗: ${errorMsg}`);
                 alert(`セルのマークに失敗しました: ${errorMsg}`);
             }
         } catch (error) {
+            this.revertBonusConsume(consumedBonusKey);
             this.updateDisplay();
             console.error('セルマークエラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
@@ -1107,6 +1124,7 @@ class LuckyBoxUI {
         const next = wrap.firstElementChild;
         if (!next) return false;
         existing.replaceWith(next);
+        this.applyBonusHighlight();
         if (window.scrollY !== keepScrollY) {
             window.scrollTo(0, keepScrollY);
         }
@@ -1182,6 +1200,7 @@ class LuckyBoxUI {
                     this.createCardElement(card, index)
                 ).join('');
             }
+            this.applyBonusHighlight();
 
             // スクロール位置を元に戻し、次の描画の後で高さの固定を外す
             if (window.scrollY !== keepScrollY) {
@@ -1358,7 +1377,8 @@ class LuckyBoxUI {
                          style="${cellStyle}"
                          ${clickHandler}
                          data-row="${rowIndex}" 
-                         data-col="${colIndex}">
+                         data-col="${colIndex}"
+                         data-value="${displayNumber}">
                         <div class="cell-content">
                             <span class="cell-number">${displayNumber}</span>
                         </div>
@@ -1398,8 +1418,14 @@ class LuckyBoxUI {
                 : `data-col="${index}"`;
             // ボーナス欄は、コンプリート済みのカードでも押せる（Complete のあとでも、残りのボーナスを使えるように）
             const clickHandler = `onclick="window.luckyBoxUI.toggleBonus(this)"`;
+            // 数字・？のボーナスが「押せる」数字（？は全部）。星・月・雷だけのマスには付けない
+            const selectValues = bonusItems
+                .filter((item) => item === 'wildcard' || item.startsWith('number_'))
+                .map((item) => (item === 'wildcard' ? '?' : item.slice('number_'.length)));
+            const valuesAttr = selectValues.length ? `data-bonus-values="${selectValues.join(',')}"` : '';
             return `
                 <div class="bonus-cell ${type}-bonus ${bonusClass}${this.isMoonStarBonus(bonusItems) ? ' bonus-pink' : ''}" 
+                     ${valuesAttr}
                      data-card-index="${cardIndex !== null ? cardIndex : ''}" 
                      data-card-id="${card.card_id}"
                      data-bonus-key="${bonusKey}"
@@ -1915,6 +1941,12 @@ class LuckyBoxUI {
             return;
         }
 
+        // 揃った数字・？のボーナス欄は、タップで「選択」（押せるマスを明示）／もう一度タップで選択を解除。
+        // 押せるマスが1つもないときは、これまでどおり、タップで使用済み（グレー）にする。
+        if (hasAvailable && element.dataset.bonusValues) {
+            if (this.toggleBonusSelection(element)) return;
+        }
+
         if (hasAvailable) {
             element.classList.remove('available');
             element.classList.add('used');
@@ -1938,6 +1970,89 @@ class LuckyBoxUI {
             // 数字・？のボーナス欄: 履歴には残さず、次の盤面の操作（マスのタップ）と一緒に Undo で戻る
             this.saveBonusStates();
         }
+    }
+
+    /* ---------------- 数字・？ボーナスの「押せるマス」 ---------------- */
+
+    // マスの数字が、選択中のボーナスで押せるか（？は、0・アルファベットも含めて全部）
+    isBonusTargetValue(cellValue, values) {
+        if (!Array.isArray(values)) return false;
+        return values.includes('?') || values.includes(String(cellValue).trim());
+    }
+
+    // 選択を切り替える。選択状態にした／解除したときは true。押せるマスがなくて何もしなかったときは false
+    toggleBonusSelection(element) {
+        const key = element.dataset.bonusKey;
+        if (this.bonusSelection && this.bonusSelection.key === key) {
+            this.bonusSelection = null;
+            this.applyBonusHighlight();
+            return true;
+        }
+
+        const values = element.dataset.bonusValues.split(',');
+        const hasTarget = Array.from(document.querySelectorAll('#cards-container .bingo-cell:not(.marked)'))
+            .some((cell) => this.isBonusTargetValue(cell.dataset.value, values));
+        if (!hasTarget) return false;
+
+        this.bonusSelection = { key, values };
+        this.applyBonusHighlight();
+        return true;
+    }
+
+    // 選択状態を画面に反映する（押せるマス: bonus-target、押せないマス: bonus-locked、選択中のボーナス欄: bonus-selected）。
+    // 盤面を描き直さず、いまの画面（マスの data-value）だけを見て更新する
+    applyBonusHighlight() {
+        const selection = this.bonusSelection;
+        const container = document.getElementById('cards-container');
+        if (container) {
+            container.classList.toggle('bonus-selecting', !!selection);
+            container.querySelectorAll('.bingo-cell').forEach((cell) => {
+                cell.classList.remove('bonus-target', 'bonus-locked');
+                if (!selection || cell.classList.contains('marked')) return;
+                cell.classList.add(this.isBonusTargetValue(cell.dataset.value, selection.values) ? 'bonus-target' : 'bonus-locked');
+            });
+        }
+        document.querySelectorAll('.bonus-cell').forEach((el) => {
+            el.classList.toggle('bonus-selected', !!selection && el.dataset.bonusKey === selection.key);
+        });
+    }
+
+    // 選択中のボーナスを「使用済み」にして、選択を終える。使用済みにしたボーナスのキーを返す（なければ null）
+    consumeBonusSelection() {
+        const selection = this.bonusSelection;
+        if (!selection) return null;
+        this.bonusSelection = null;
+
+        this.manualBonusStates.set(selection.key, 'used');
+        this.saveBonusStates();
+        const el = document.querySelector(`.bonus-cell[data-bonus-key="${selection.key}"]`);
+        if (el) {
+            el.classList.remove('available', 'bonus-selected');
+            el.classList.add('used');
+        }
+        this.applyBonusHighlight();
+        return selection.key;
+    }
+
+    // マスのマークに失敗したとき、使用済みにしたボーナスを元に戻す
+    revertBonusConsume(key) {
+        if (!key) return;
+        this.manualBonusStates.delete(key);
+        this.saveBonusStates();
+    }
+
+    // 選択中のボーナスが、もう使えない状態（Undo・リセットなどで消えた／使用済みになった）なら、選択を解除する
+    pruneBonusSelection() {
+        const selection = this.bonusSelection;
+        if (!selection) return;
+        let valid = this.manualBonusStates.get(selection.key) !== 'used' && !!this.gameState;
+        if (valid) {
+            const [cardId, type, index] = selection.key.split(':');
+            const cards = (this.gameState.cards || []).concat(this.gameState.completed_cards || []);
+            const card = cards.find((c) => c.card_id === cardId);
+            valid = !!card && (card.completed_lines || []).some(([t, i]) => t === type && i === Number(index));
+        }
+        if (!valid) this.bonusSelection = null;
     }
 
     // 「使用済み」にしたボーナス欄の一覧は、ゲームエンジン側に保存する（Undo で戻すため）。
@@ -1964,6 +2079,8 @@ class LuckyBoxUI {
         window.LuckyBoxEngine.getApi().getBonusStates().forEach((key) => {
             this.manualBonusStates.set(key, 'used');
         });
+        // 選択中のボーナスが使えなくなっていたら、選択を解除する（Undo・リセットの後など）
+        this.pruneBonusSelection();
     }
 }
 

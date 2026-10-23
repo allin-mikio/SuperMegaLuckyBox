@@ -149,19 +149,8 @@
     margin-left: -2px !important;
 }
 
-/* 星・月のマスの色（実物: 星はピンク、月は水色）。まだ揃っていない（待機中）のときだけ。 */
-.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--star) {
-    background: #FFD3DC !important;
-}
-
-.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--moon) {
-    background: #C9DEF5 !important;
-}
-
-/* 雷のマスは、実物のように薄い緑（雷だけのマスは揃うとすぐグレーになる） */
-.bingo-card .bonus-cell:not(.available):not(.used):has(.bonus-icon--lightning) {
-    background: #C8F5DC !important;
-}
+/* 星・月・雷は、マーク自体に色が付いているので、まだ揃っていない（待機中）ときの背景は、
+   数字・？と同じ白（上の「待機中」のルール）のままにする。 */
 
 /*
  * 「揃った」マスの合図（すぐ処理するか、ラウンド終わりまで待つか）
@@ -247,4 +236,29 @@
     background: none !important;
     -webkit-text-fill-color: #FFFFFF !important;
     filter: none !important;
+}
+
+/*
+ * 数字・？のボーナスを選択中（ボーナス欄をタップしたあと）
+ *   押せるマス: 黄色の塗り＋赤い太枠。それ以外の空きマスは、うすくして押せなくする。
+ *   選択中のボーナス欄: 青い太枠（点滅は止める）。もう一度タップすると選択を解除できる。
+ */
+.bingo-card .bingo-cell.bonus-target:not(.marked) {
+    background: #F8FB8C !important;
+    border-color: #E05550 !important;
+    outline: 4px solid #E05550;
+    outline-offset: -4px;
+    cursor: pointer;
+}
+
+.bingo-card .bingo-cell.bonus-locked:not(.marked) {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.bingo-card .bonus-cell.bonus-selected {
+    animation: none !important;
+    outline: 4px solid #1B62B8 !important;
+    outline-offset: -4px;
 }
