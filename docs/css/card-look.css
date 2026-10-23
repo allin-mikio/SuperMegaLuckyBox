@@ -175,7 +175,7 @@
     overflow: hidden;
     outline: 3px solid #E05550;
     outline-offset: -3px;
-    animation: bonus-outline-blink 3.2s steps(1, end) infinite;
+    animation: bonus-outline-blink 2.4s steps(1, end) infinite;
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink)::before {
@@ -186,7 +186,7 @@
     opacity: 1;
     z-index: 0;
     pointer-events: none;
-    animation: bonus-fill-blink 3.2s steps(1, end) infinite;
+    animation: bonus-fill-blink 2.4s steps(1, end) infinite;
 }
 
 .bingo-card .bonus-cell.available:not(.bonus-pink) > * {
@@ -200,7 +200,7 @@
     box-shadow: none !important;
     outline: 3px solid #E05550;
     outline-offset: -3px;
-    animation: bonus-outline-blink 3.2s steps(1, end) infinite;
+    animation: bonus-outline-blink 2.4s steps(1, end) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -241,7 +241,7 @@
 /*
  * 数字・？のボーナスを選択中（ボーナス欄をタップしたあと）
  *   押せるマス: 黄色の塗り＋赤い太枠。それ以外の空きマスは、うすくして押せなくする。
- *   選択中のボーナス欄: 青い太枠（点滅は止める）。もう一度タップすると選択を解除できる。
+ *   選択中のボーナス欄: 固定の緑（点滅は止める）。もう一度タップすると選択を解除できる。
  */
 .bingo-card .bingo-cell.bonus-target:not(.marked) {
     background: #F8FB8C !important;
@@ -257,10 +257,19 @@
     cursor: not-allowed;
 }
 
-.bingo-card .bonus-cell.bonus-selected {
+.bingo-card .bonus-cell.available.bonus-selected,
+.bingo-card .bonus-cell.available.bonus-selected:not(.bonus-pink) {
+    /* 点滅をやめて、固定の緑にする（どれをタップしたか分かりやすくするため） */
     animation: none !important;
-    outline: 4px solid #1B62B8 !important;
+    background: #5FD27A !important;
+    border-color: #1B7F3A !important;
+    outline: 4px solid #1B7F3A !important;
     outline-offset: -4px;
+}
+
+.bingo-card .bonus-cell.bonus-selected::before {
+    display: none !important;
+    animation: none !important;
 }
 
 /* 星・月の獲得数（ユーザーモードでも見える）。スタッフモードでは「−／＋」と「ラウンド終了」も出る */
@@ -268,15 +277,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 16px;
+    gap: 12px 32px;
     margin: 8px 0;
 }
 
 .token-hud-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 12px 4px 6px;
+    gap: 14px;
+    padding: 6px 14px 6px 10px;
     border: 3px solid #7030A0;
     border-radius: 10px;
     background: #FFFFF4;
@@ -304,13 +313,14 @@
 
 .token-hud-adjust {
     display: inline-flex;
-    gap: 4px;
-    margin-left: 4px;
+    gap: 16px;
+    margin-left: 12px;
+    padding: 4px 6px;
 }
 
 .token-hud-btn {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border: 2px solid #4B0082;
     border-radius: 8px;
     background: #FFFFFF;
@@ -336,12 +346,29 @@
 
 /* 進捗表示（Undo の右）: チュートリアル／ラウンド1〜4 */
 .progress-label {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* チーム名と進捗のあいだの隙間 */
     margin-left: 8px;
-    font-size: 1.8rem;
-    font-weight: bold;
+    font-size: 1.9rem;
+    font-weight: 900;
     line-height: 1.2;
-    color: #4B0082;
     white-space: nowrap;
+}
+
+/* チーム名: 紫の丸い札に白文字 */
+.progress-team {
+    padding: 2px 16px;
+    border-radius: 999px;
+    background: #7030A0;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* 進捗: 濃い紫の太字に、黄色のかげ */
+.progress-step {
+    color: #4B0082;
+    text-shadow: 2px 2px 0 #FFD54F;
 }
 
 /* ラウンド終了ボタンのそばに出す、スプシ送信の結果 */
@@ -349,6 +376,11 @@
     font-size: 0.9rem;
     font-weight: bold;
     color: #1B5E20;
+}
+
+/* 何も表示するものがないときは、スタッフモードの点線の枠も出さない */
+.round-end-status:empty {
+    display: none;
 }
 
 .round-end-status.is-error {

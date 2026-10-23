@@ -317,7 +317,17 @@ class LuckyBoxUI {
         }
 
         // 進捗（Undo の右）: チュートリアル → ラウンド1〜4 → 全ラウンド終了
-        setText('progress-label', finished ? '全ラウンド終了' : (tutorial ? 'チュートリアル' : `ラウンド${round}`));
+        // 先頭にチーム名を付ける（例: 「チームB 全ラウンド終了」）。チームの変更は updateDisplay → ここで反映される
+        const team = window.LuckyBoxEngine.getApi().getTeam();
+        const progress = finished ? '全ラウンド終了' : (tutorial ? 'チュートリアル' : `ラウンド${round}`);
+        const progressEl = document.getElementById('progress-label');
+        if (progressEl) {
+            const html = `<span class="progress-team">チーム${team}</span><span class="progress-step">${progress}</span>`;
+            if (progressEl.dataset.html !== html) {
+                progressEl.dataset.html = html;
+                progressEl.innerHTML = html;
+            }
+        }
         const endBtn = document.getElementById('round-end-btn');
         if (endBtn) {
             endBtn.disabled = finished;
@@ -352,6 +362,13 @@ class LuckyBoxUI {
         if (this._endingRound || !confirm(message)) return;
 
         this._endingRound = true;
+        // 前回の送信結果の表示は、ここで消す
+        clearTimeout(this._roundEndStatusTimer);
+        const prevStatus = document.getElementById('round-end-status');
+        if (prevStatus) {
+            prevStatus.textContent = '';
+            prevStatus.classList.remove('is-error');
+        }
         try {
             const result = await this.apiCall('end_round', {});
             if (result && result.success && result.game_state) {
@@ -370,8 +387,17 @@ class LuckyBoxUI {
                 // 送信の結果は、ボタンのそばにも表示する
                 const nearStatus = document.getElementById('round-end-status');
                 if (nearStatus && statusEl) {
+                    const isError = statusEl.classList.contains('is-error');
                     nearStatus.textContent = statusEl.textContent;
-                    nearStatus.classList.toggle('is-error', statusEl.classList.contains('is-error'));
+                    nearStatus.classList.toggle('is-error', isError);
+                    // 送信完了のメッセージは、5秒後に消す（失敗のメッセージは、気づけるよう残す）
+                    clearTimeout(this._roundEndStatusTimer);
+                    if (!isError) {
+                        this._roundEndStatusTimer = setTimeout(() => {
+                            nearStatus.textContent = '';
+                            nearStatus.classList.remove('is-error');
+                        }, 5000);
+                    }
                 }
                 if (statusEl && statusEl.classList.contains('is-error')) {
                     alert(`ラウンド${round}は終了しましたが、スプシへの送信に失敗しました。\n${statusEl.textContent}\n（Scores の「結果送信」で再送信できます）`);
