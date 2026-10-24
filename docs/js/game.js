@@ -14,6 +14,8 @@ class LuckyBoxUI {
         // ビンゴパート（ユーザーモード）の流れ: ① 司会の読み上げ番号を選ぶ → ② 盤面のその数字を1マスだけタップ
         //   → ③ 数字・？のボーナスが有効になったら、すぐ使い切る → ①へ。選んだ読み上げ番号（'0'〜'9'）。未選択は null。保存しない
         this.calledNumber = null;
+        // 番号カードに 0 を出すか（ふだんは 1〜9。モード表示を5回タップすると true になり、以降は保存されて 0〜9）
+        this.showZero = false;
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
@@ -104,13 +106,21 @@ class LuckyBoxUI {
         return this.hasOpenCellFor(el.dataset.bonusValues.split(','));
     }
 
-    // 画面の「番号カード」（0〜9）を作り、操作を受ける
+    // 番号カードを並べる。ふだんは 1〜9、隠しスイッチ（this.showZero）のあとは 0〜9
+    renderCallNumbers() {
+        const numbers = document.getElementById('call-numbers');
+        if (!numbers) return;
+        const start = this.showZero ? 0 : 1;
+        numbers.innerHTML = Array.from({ length: 10 - start }, (_, i) => start + i).map((n) =>
+            `<button type="button" class="call-num" data-num="${n}" aria-label="読み上げ番号 ${n}">${n}</button>`
+        ).join('');
+    }
+
+    // 画面の「番号カード」を作り、操作を受ける
     setupCallPanel() {
         const numbers = document.getElementById('call-numbers');
         if (numbers) {
-            numbers.innerHTML = Array.from({ length: 10 }, (_, n) =>
-                `<button type="button" class="call-num" data-num="${n}" aria-label="読み上げ番号 ${n}">${n}</button>`
-            ).join('');
+            this.renderCallNumbers();
             numbers.addEventListener('click', (event) => {
                 const btn = event.target.closest('.call-num');
                 if (!btn || btn.disabled || !this.flowEnforced()) return;
@@ -119,6 +129,26 @@ class LuckyBoxUI {
                 // もう一度タップすると選択を取り消し。別の番号をタップすると選び直し
                 this.calledNumber = this.calledNumber === btn.dataset.num ? null : btn.dataset.num;
                 this.updateBingoFlow();
+            });
+        }
+        // 隠しスイッチ: モード表示の文字を、2秒以内の間隔で5回タップすると、番号カードが 0〜9 の表示になる（以降はずっと 0〜9）
+        const modeEl = document.getElementById('flow-mode');
+        if (modeEl) {
+            let taps = 0;
+            let lastTap = 0;
+            modeEl.addEventListener('click', () => {
+                if (this.showZero) return;
+                const now = Date.now();
+                taps = now - lastTap <= 2000 ? taps + 1 : 1;
+                lastTap = now;
+                if (taps >= 5) {
+                    taps = 0;
+                    this.showZero = true;
+                    this.saveUiState();
+                    this.renderCallNumbers();
+                    this.updateBingoFlow();
+                    this.nudgeFlow();
+                }
             });
         }
         const cancelBtn = document.getElementById('flow-cancel-btn');
@@ -164,7 +194,7 @@ class LuckyBoxUI {
         let text;
         let cls;
         if (phase === 'wait') {
-            text = '① 司会の読み上げ番号を選んでください';
+            text = '① ビンゴマスの数字を決定してください';
             cls = 'is-wait';
         } else if (phase === 'board') {
             const hasCell = this.hasOpenCellFor([this.calledNumber]);
@@ -2129,6 +2159,8 @@ class LuckyBoxUI {
         // パート（謎解き / ビンゴ）。再起動しても、謎解きパート中ならそのまま（ロックされた状態）で始まる
         this.part = saved.part === 'puzzle' ? 'puzzle' : 'bingo';
         this._applyPartDom();
+        this.showZero = !!saved.showZero;
+        this.renderCallNumbers();
 
         // ボーナス欄の使用状態は、エンジン側（Undo と一緒に戻る）に保存しているので、ここでは扱わない
         this.loadBonusStates();
@@ -2137,6 +2169,7 @@ class LuckyBoxUI {
     saveUiState() {
         window.LuckyBoxEngine.uiState.save({
             part: this.part,
+            showZero: this.showZero,
             currentRound: this.currentRound
         });
     }
