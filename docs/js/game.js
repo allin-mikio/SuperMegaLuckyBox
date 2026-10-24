@@ -1129,6 +1129,15 @@ class LuckyBoxUI {
 
     async undo() {
         try {
+            // 気軽に押せないよう、戻す内容を見せて確認する。履歴の一番新しい操作が、いま戻される操作
+            const history = (this.gameState && this.gameState.history) || [];
+            const last = history[history.length - 1];
+            const label = last && last.action ? String(last.action) : '';
+            const message = label
+                ? `【${label}】を取り消して戻します。\nよろしいですか？`
+                : '直前の操作を取り消して戻します。\nよろしいですか？';
+            if (!confirm(message)) return;
+
             const beforeKey = this.cardMembershipKey();
             const result = await this.apiCall('undo', {});
             
