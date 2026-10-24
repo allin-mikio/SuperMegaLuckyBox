@@ -201,6 +201,23 @@ section {
     transform: translateY(-1px);
 }
 
+/* ラウンド選択: LBカードの帯と同じ色（チュートリアル・R4 紫 / R1 緑 / R2 青 / R3 ピンク）。白い太字 */
+.card-management select#round-select {
+    background: #7030A0;
+    border-color: #7030A0;
+    color: #FFFFFF;
+}
+.card-management select#round-select[data-round="round1"] { background: #00B050; border-color: #00B050; }
+.card-management select#round-select[data-round="round2"] { background: #40AFFF; border-color: #40AFFF; }
+.card-management select#round-select[data-round="round3"] { background: #FF6565; border-color: #FF6565; }
+/* 開いたリストの選択肢: 背景は白で、文字だけラウンドの色（PC / Android のブラウザで有効。iPhone の Safari は色を無視する） */
+.card-management select#round-select option { background: #FFFFFF; font-weight: bold; }
+.card-management select#round-select option[value="tutorial"] { color: #7030A0; }
+.card-management select#round-select option[value="round1"] { color: #00B050; }
+.card-management select#round-select option[value="round2"] { color: #40AFFF; }
+.card-management select#round-select option[value="round3"] { color: #FF6565; }
+.card-management select#round-select option[value="round4"] { color: #7030A0; }
+
 .card-management-controls select:last-of-type {
     border-color: #ddd;
     color: #333;
@@ -610,6 +627,7 @@ body #lightning-minus2.lightning-effect-btn.active {
 /* Undo / オールリセット（Bingo Cards の上。雷数で位置が変わらない） */
 .board-actions {
     display: flex;
+    flex-wrap: wrap; /* 狭い画面では、ラウンド終了ボタンが下の行に回る */
     align-items: center;
     gap: 10px;
     /* section 共通の padding: 12px を維持する（0 にするとボタンが枠の左上にはみ出して見える） */
@@ -1339,6 +1357,16 @@ body #lightning-minus2.lightning-effect-btn.active {
 
 body.staff-mode .version-badge {
     color: #FFECEC;
+}
+
+/* オールリセット: コンテナの左上の隅（バージョン表示の反対側）。普段の操作ボタンから離して誤タップを防ぐ */
+.reset-corner-btn {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 5;
+    font-size: 0.8rem;
+    padding: 6px 10px;
 }
 
 /* ハイライト機能 - 選択状態に応じたマイルドな強調表示 */

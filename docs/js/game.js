@@ -157,10 +157,12 @@ class LuckyBoxUI {
             newRoundSelect.addEventListener('change', (e) => {
                 console.log('ラウンド選択変更:', e.target.value);
                 this.currentRound = e.target.value;
+                this.updateRoundSelectColor();
                 this.saveUiState();
                 this.loadRoundCards();
             });
         }
+        this.updateRoundSelectColor();
 
         // Undo/Resetボタン
         const resetBtn = document.getElementById('reset-btn');
@@ -307,6 +309,11 @@ class LuckyBoxUI {
             this.syncRoundListToProgress(round);
         }
         this._progressRound = round;
+        // 再起動後に復元した選択が「チュートリアル」のまま、チュートリアルが終わっている場合は、進捗のリストに直す
+        if (round >= 1 && this.currentRound === 'tutorial') {
+            this.syncRoundListToProgress(round);
+        }
+        this.updateTutorialOption(round);
 
         // Scores の送信ボタンに、終えたラウンドを表示する（例: ラウンド2を終えたあとは「ラウンド2結果送信」）
         const submitBtn = document.getElementById('score-submit-btn');
@@ -339,6 +346,30 @@ class LuckyBoxUI {
         if (moonMinus) moonMinus.disabled = moon <= 0;
     }
 
+    // 「チュートリアルカード」の選択肢は、チュートリアル中（オールリセット後〜チュートリアル終了まで）だけ出す。
+    // 一覧から外すときは option を取り除く（iOS などは hidden が効かないため）。Undo で戻れば再び出る
+    updateTutorialOption(round) {
+        const roundSelect = document.getElementById('round-select');
+        if (!roundSelect) return;
+        const existing = roundSelect.querySelector('option[value="tutorial"]');
+        if (round >= 1) {
+            if (existing) {
+                this._tutorialOption = existing;
+                existing.remove();
+            }
+        } else if (!existing) {
+            const option = this._tutorialOption || new Option('チュートリアルカード', 'tutorial');
+            roundSelect.insertBefore(option, roundSelect.firstChild);
+            roundSelect.value = this.currentRound;
+        }
+    }
+
+    // ラウンド選択欄の色を、いま選んでいるラウンドの色（LBカードの帯と同じ）にする。色は CSS の data-round で決まる
+    updateRoundSelectColor() {
+        const roundSelect = document.getElementById('round-select');
+        if (roundSelect) roundSelect.dataset.round = this.currentRound || roundSelect.value;
+    }
+
     // 進捗（0 = チュートリアル、1〜4 = ラウンド、5 = 全ラウンド終了）に対応するカードのリストへ切り替える
     syncRoundListToProgress(round) {
         const name = round <= 0 ? 'tutorial' : `round${Math.min(round, 4)}`;
@@ -346,6 +377,7 @@ class LuckyBoxUI {
         this.currentRound = name;
         const roundSelect = document.getElementById('round-select');
         if (roundSelect) roundSelect.value = name;
+        this.updateRoundSelectColor();
         this.saveUiState();
         this.loadRoundCards();
     }
@@ -1152,6 +1184,10 @@ class LuckyBoxUI {
                 if (!confirm('本当にゲームをリセットしますか？\nすべての進行状況が失われます。')) {
                     return;
                 }
+                // 2回目の確認（誤操作防止）
+                if (!confirm('【最終確認】\nすべてのカード・トークン・得点が消えて、タイトル画面に戻ります。\n本当にオールリセットしてよろしいですか？')) {
+                    return;
+                }
                 confirmed = true;
             }
             
@@ -1169,6 +1205,7 @@ class LuckyBoxUI {
                 if (roundSelect) {
                     roundSelect.value = this.currentRound;
                 }
+                this.updateRoundSelectColor();
                 this.saveUiState();
 
                 const addResult = await this.apiCall('add_card', { card_id: 'Tutorial' });
@@ -1861,6 +1898,7 @@ class LuckyBoxUI {
             if (roundSelect) {
                 roundSelect.value = this.currentRound;
             }
+            this.updateRoundSelectColor();
         }
 
         // ボーナス欄の使用状態は、エンジン側（Undo と一緒に戻る）に保存しているので、ここでは扱わない

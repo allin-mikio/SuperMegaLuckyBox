@@ -51,6 +51,9 @@
         <!-- バージョン表示（右上の隅） -->
         <div class="version-badge">ver.<span id="app-version">-</span></div>
 
+        <!-- オールリセット（スタッフ専用）。誤タップしにくいよう、操作ボタンから離して左上の隅に置く。押すと確認を2回聞く -->
+        <button id="reset-btn" class="btn btn-warning btn-inline staff-only reset-corner-btn" type="button">🔄 オールリセット</button>
+
         <h1 id="app-title"><img class="title-logo" src="images/title-logo.png" alt="" draggable="false"> はろなぞ4<br><small>Bingo Card Support</small></h1>
 
         <main>
@@ -139,7 +142,9 @@
                 <button id="undo-btn-top" class="btn btn-secondary btn-inline undo-btn" disabled>↖ Undo</button>
                 <!-- 進捗（チュートリアル → ラウンド1〜4）。「ラウンド終了」ボタンで進む -->
                 <div id="progress-label" class="progress-label" aria-live="polite">チュートリアル</div>
-                <button id="reset-btn" class="btn btn-warning btn-inline staff-only">🔄 オールリセット</button>
+                <!-- ラウンド終了ボタン（スタッフ専用）: 進捗の右。押すと次のラウンドへ進む -->
+                <button id="round-end-btn" class="btn btn-warning btn-inline staff-only" type="button">チュートリアル終了</button>
+                <span id="round-end-status" class="round-end-status staff-only" aria-live="polite"></span>
             </section>
 
             <!-- 星・月の獲得数（ビンゴ・謎解きで増えたぶんを自動で数える。雷は、下の Bingo Cards 見出しの右）。
@@ -161,8 +166,6 @@
                         <button type="button" class="token-hud-btn" data-hud-adjust="moon" data-amount="1" aria-label="月を1つ増やす">＋</button>
                     </span>
                 </div>
-                <button id="round-end-btn" class="btn btn-warning btn-inline staff-only" type="button">チュートリアル終了</button>
-                <span id="round-end-status" class="round-end-status staff-only" aria-live="polite"></span>
             </div>
 
             <!-- ビンゴカード表示セクション -->
