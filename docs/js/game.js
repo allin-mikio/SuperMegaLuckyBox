@@ -14,6 +14,8 @@ class LuckyBoxUI {
         // ビンゴパート（ユーザーモード）の流れ: ① 司会の読み上げ番号を選ぶ → ② 盤面のその数字を1マスだけタップ
         //   → ③ 数字・？のボーナスが有効になったら、すぐ使い切る → ①へ。選んだ読み上げ番号（'0'〜'9'）。未選択は null。保存しない
         this.calledNumber = null;
+        // ② で「使う」と決めた雷の数（0〜4）。盤面のマスをタップした時点で、その数だけ雷トークンを減らす。保存しない
+        this.lightningReserved = 0;
         // 番号カードに 0 を出すか（ふだんは 1〜9。モード表示を5回タップすると true になり、以降は保存されて 0〜9）
         this.showZero = false;
         this.setupEventListeners();
@@ -116,6 +118,24 @@ class LuckyBoxUI {
         ).join('');
     }
 
+    // 雷を k 個使ったときに押せる数字。1〜9 の輪（9 の次は 1、1 の前は 9）の上で、読み上げ番号 ±k。
+    //   雷1個: ±1 / 2個: ±2 / 3個: ±3（読み上げ番号そのものは含まない）。4個: すべてのマス（0・アルファベットも。？と同じ）。
+    //   0 は輪に含まない（0 には雷の効果なし）
+    lightningValues(number, k) {
+        if (!k) return [number];
+        if (k >= 4) return ['?'];
+        if (number === '0') return [number];
+        const n = Number(number);
+        const up = ((n - 1 + k) % 9) + 1;
+        const down = ((((n - 1 - k) % 9) + 9) % 9) + 1;
+        return [String(up), String(down)];
+    }
+
+    // いま ② 盤面のタップ待ち（読み上げ番号を選んだ後で、有効なボーナスが無い）か
+    isBoardPhase() {
+        return this.calledNumber !== null && this.getPendingBonuses().length === 0;
+    }
+
     // 画面の「番号カード」を作り、操作を受ける
     setupCallPanel() {
         const numbers = document.getElementById('call-numbers');
@@ -128,6 +148,7 @@ class LuckyBoxUI {
                 if (this.getPendingBonuses().length) return;
                 // もう一度タップすると選択を取り消し。別の番号をタップすると選び直し
                 this.calledNumber = this.calledNumber === btn.dataset.num ? null : btn.dataset.num;
+                this.lightningReserved = 0; // 番号を変えたら、雷の使用予定は取り消し（トークンはまだ減っていない）
                 this.updateBingoFlow();
             });
         }
@@ -155,6 +176,7 @@ class LuckyBoxUI {
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => {
                 this.calledNumber = null;
+                this.lightningReserved = 0;
                 this.updateBingoFlow();
             });
         }
@@ -177,6 +199,8 @@ class LuckyBoxUI {
         const enforced = this.flowEnforced();
         panel.hidden = !enforced;
         if (!enforced) {
+            this.lightningReserved = 0;
+            this.renderLightningTray();
             this.applyBonusHighlight();
             return;
         }
@@ -191,16 +215,34 @@ class LuckyBoxUI {
         if (pending.length) phase = 'bonus';
         else phase = this.calledNumber === null ? 'wait' : 'board';
 
+        // 雷の使用予定は、② のあいだだけ。持っている数（と最大4個）を超えないようにする
+        const tokens = Math.max(0, this.gameState.lightning_tokens || 0);
+        this.lightningReserved = phase === 'board' ? Math.min(this.lightningReserved, tokens, 4) : 0;
+        this.renderLightningTray();
+
         let text;
         let cls;
         if (phase === 'wait') {
             text = '① ビンゴマスの数字を決定してください';
             cls = 'is-wait';
         } else if (phase === 'board') {
-            const hasCell = this.hasOpenCellFor([this.calledNumber]);
-            text = hasCell
-                ? `② 盤面の「${this.calledNumber}」を1マスタップ`
-                : `② 「${this.calledNumber}」の空きマスがありません（右のボタンで戻る）`;
+            const k = this.lightningReserved;
+            const values = this.lightningValues(this.calledNumber, k);
+            const hasCell = this.hasOpenCellFor(values);
+            if (k === 0) {
+                text = hasCell
+                    ? `② 盤面の「${this.calledNumber}」を1マスタップ`
+                    : `② 「${this.calledNumber}」の空きマスがありません（${tokens > 0 ? '雷を使うか、' : ''}右のボタンで戻る）`;
+            } else if (k >= 4) {
+                text = hasCell
+                    ? '② 雷4個: すべてのマスから1マスタップ'
+                    : '② 押せる空きマスがありません（右のボタンで戻る）';
+            } else {
+                const label = values.length > 1 && values[0] !== values[1] ? `「${values[0]}」「${values[1]}」` : `「${values[0]}」`;
+                text = hasCell
+                    ? `② 雷${k}個: ${label}から1マスタップ`
+                    : `② 雷${k}個: ${label}の空きマスがありません（雷を増やすか、右のボタンで戻る）`;
+            }
             cls = 'is-board';
         } else {
             if (this.bonusSelection) text = '③ ボーナス: 強調されたマスをタップ';
@@ -461,9 +503,29 @@ class LuckyBoxUI {
         if (!tray) return;
 
         tray.addEventListener('click', (event) => {
-            if (event.target.closest('.lightning-token')) {
-                this.adjustTokens('lightning', -1);
+            const token = event.target.closest('.lightning-token');
+            if (!token) return;
+
+            // ビンゴパートの流れの中: 雷は ② 盤面のタップ待ちのときだけ使える。
+            // タップで「使う雷」を1つ増やす（最大4個）。使う予定の雷をもう一度タップすると1つ戻す。
+            // トークンが実際に減るのは、盤面のマスをタップした時点
+            if (this.flowEnforced()) {
+                if (!this.isBoardPhase()) {
+                    this.nudgeFlow();
+                    return;
+                }
+                if (token.classList.contains('is-reserved')) {
+                    this.lightningReserved = Math.max(0, this.lightningReserved - 1);
+                } else if (this.lightningReserved < 4) {
+                    this.lightningReserved += 1;
+                }
+                this.renderLightningTray();
+                this.updateBingoFlow();
+                return;
             }
+
+            // それ以外（スタッフモードなど）: タップで1つ減る
+            this.adjustTokens('lightning', -1);
         });
     }
 
@@ -473,11 +535,18 @@ class LuckyBoxUI {
 
         const count = Math.max(0, this.gameState.lightning_tokens || 0);
         // 数が変わっていなければ作り直さない（画面のちらつき・スクロール位置のずれを避ける）
-        if (this._lightningShown === count && tray.childElementCount) return;
-        this._lightningShown = count;
+        // ② で「使う」と決めた雷（先頭から数えて reserved 個）は、強調して表示する
+        const reserved = Math.min(this.lightningReserved || 0, count);
+        const renderKey = `${count}:${reserved}`;
+        if (this._lightningShown === renderKey && tray.childElementCount) return;
+        this._lightningShown = renderKey;
 
         // 個数の表示と「−／＋」は、見出しの左の枠（星・月と同じ作り）に移した。ここはアイコンだけ
-        tray.innerHTML = `<button type="button" class="lightning-token" aria-label="雷を1つ使う">${this.getBonusIcon('lightning')}</button>`.repeat(count);
+        const icon = this.getBonusIcon('lightning');
+        tray.innerHTML = Array.from({ length: count }, (_, i) => {
+            const isReserved = i < reserved;
+            return `<button type="button" class="lightning-token${isReserved ? ' is-reserved' : ''}" aria-label="${isReserved ? '雷の使用を取り消す' : '雷を使う'}">${icon}</button>`;
+        }).join('');
     }
 
     /* ---------------- 星・月の表示（ユーザーモードでも見える）とラウンド終了 ---------------- */
@@ -560,7 +629,7 @@ class LuckyBoxUI {
             : '';
         const progressEl = document.getElementById('progress-label');
         if (progressEl) {
-            const html = `<span class="progress-team">チーム${team}</span><span class="progress-step">${progress}</span>${partHtml}`;
+            const html = `<span class="progress-team">チーム${team}</span><span class="progress-step${(!finished && !tutorial) ? ` is-round${round}` : ''}">${progress}</span>${partHtml}`;
             if (progressEl.dataset.html !== html) {
                 progressEl.dataset.html = html;
                 progressEl.innerHTML = html;
@@ -1444,6 +1513,9 @@ class LuckyBoxUI {
                 this.manualBonusStates.clear();
                 this.calledNumber = null;
                 this.bonusSelection = null;
+                // オールリセットで、番号カードは 1〜9 の表示に戻る（0 は、モード表示の5回タップでまた出せる）
+                this.showZero = false;
+                this.renderCallNumbers();
                 this.gameState = result.game_state;
 
                 // リセット後は、最初の状態として「カード Tutorial」を追加し、ラウンドの選択を「チュートリアル」にする
@@ -1511,7 +1583,12 @@ class LuckyBoxUI {
         const consumedBonusKey = this.consumeBonusSelection();
         // 読み上げ番号のマスをタップしたとき（ボーナスではないとき）は、番号の選択を終える（1回の読み上げにつき1マス）
         const consumedCalled = (!consumedBonusKey && enforced && this.calledNumber !== null) ? this.calledNumber : null;
-        if (consumedCalled !== null) this.calledNumber = null;
+        // ② で使うと決めた雷。マスのマークが成功したあとに、その数だけトークンを減らす
+        const usedLightning = consumedCalled !== null ? this.lightningReserved : 0;
+        if (consumedCalled !== null) {
+            this.calledNumber = null;
+            this.lightningReserved = 0;
+        }
 
         // 弱い端末向け: エンジン処理の前に黒塗りを見せて、タップ感を先に返す
         this.paintCellOptimistic(cardIndex, row, col);
@@ -1527,10 +1604,15 @@ class LuckyBoxUI {
             if (result && result.success === true) {
                 this.gameState = result.game_state;
                 this.updateAfterMark(cardIndex);
+                // 使った雷のぶん、トークンを減らす（操作履歴にも残る）
+                if (usedLightning > 0) await this.adjustTokens('lightning', -usedLightning);
             } else {
                 // 楽観更新を取り消すため、盤面を正式状態で描き直す
                 this.revertBonusConsume(consumedBonusKey);
-                if (consumedCalled !== null) this.calledNumber = consumedCalled;
+                if (consumedCalled !== null) {
+                    this.calledNumber = consumedCalled;
+                    this.lightningReserved = usedLightning;
+                }
                 this.updateDisplay();
                 const errorMsg = result ? (result.error || '不明なエラー') : 'レスポンスが無効です';
                 console.error(`セルマーク失敗: ${errorMsg}`);
@@ -1538,7 +1620,10 @@ class LuckyBoxUI {
             }
         } catch (error) {
             this.revertBonusConsume(consumedBonusKey);
-            if (consumedCalled !== null) this.calledNumber = consumedCalled;
+            if (consumedCalled !== null) {
+                this.calledNumber = consumedCalled;
+                this.lightningReserved = usedLightning;
+            }
             this.updateDisplay();
             console.error('セルマークエラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
@@ -2465,8 +2550,8 @@ class LuckyBoxUI {
     // ビンゴパートの流れの中で読み上げ番号を選んだあと（ボーナス処理中でないとき）は、その番号だけ。それ以外は null
     getHighlightValues() {
         if (this.bonusSelection) return this.bonusSelection.values;
-        if (this.flowEnforced() && this.calledNumber !== null && this.getPendingBonuses().length === 0) {
-            return [this.calledNumber];
+        if (this.flowEnforced() && this.isBoardPhase()) {
+            return this.lightningValues(this.calledNumber, this.lightningReserved);
         }
         return null;
     }

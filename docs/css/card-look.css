@@ -226,6 +226,13 @@
     background: #A5E8C4 !important;
 }
 
+/* ② で「使う」と決めた雷（盤面のマスをタップした時点で、実際に減る）: 黄色の地に赤い枠 */
+.lightning-token.is-reserved {
+    background: #F8FB8C !important;
+    border-color: #E05550 !important;
+    transform: translateY(-3px);
+}
+
 /* 使用済み（グレー）のときは、数字・？・星・月・雷をうすくする */
 .bingo-card .bonus-cell.used .bonus-icon svg {
     opacity: 0.45 !important;
@@ -371,6 +378,19 @@
     text-shadow: 2px 2px 0 #FFD54F;
 }
 
+/* 進捗の文字は、ラウンドの色（LBカードの帯と同じ。チュートリアル・R4・全ラウンド終了は紫のまま）。
+ * 黄色のかげだと色が見えにくいので、色付きのときは暗いかげにする */
+.progress-step.is-round1,
+.progress-step.is-round2,
+.progress-step.is-round3,
+.progress-step.is-round4 {
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+.progress-step.is-round1 { color: #00B050; }
+.progress-step.is-round2 { color: #40AFFF; }
+.progress-step.is-round3 { color: #FF6565; }
+.progress-step.is-round4 { color: #7030A0; }
+
 /* パート（謎解き / ビンゴ）: 進捗の右に出す札 */
 .progress-part {
     padding: 2px 14px;
@@ -474,6 +494,41 @@
     flex-wrap: wrap;
     gap: 10px;
 }
+
+/* ==== 操作パネルの固定表示（A案）====
+ * カードが増えて画面からはみ出しても、番号の決定パネルを画面の上端に残す（LB Cards の区画の中だけで固定）。
+ * 場所をとらないよう、少し小さくしている。元に戻すときは、この区画（ここから「ここまで」）を丸ごと消す。 */
+.call-panel {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    margin: 0 -6px 12px;
+    padding: 8px 8px 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.call-panel .flow-bar {
+    min-height: 42px;
+    margin-bottom: 6px;
+}
+.call-panel .flow-mode {
+    padding: 6px 12px;
+    font-size: 1.05rem;
+}
+.call-panel .call-numbers {
+    gap: 8px;
+}
+.call-panel .call-num {
+    width: 46px;
+    height: 54px;
+    font-size: 1.8rem;
+}
+.call-panel .call-actions .btn {
+    padding: 5px 12px;
+    font-size: 0.9rem;
+}
+/* ==== 操作パネルの固定表示（ここまで）==== */
 
 /* 謎解きパートのユーザーモード: バージョン表示（スタッフモードへの入口）以外は、全てタップ無効 */
 body.puzzle-part:not(.staff-mode) .container > *:not(.version-badge) {
