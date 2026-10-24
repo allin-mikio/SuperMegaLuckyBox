@@ -357,7 +357,7 @@
 
       this.cards = [];
       this.completed_cards = [];
-      this.lightning_tokens = 4;
+      this.lightning_tokens = 0;
       this.moon_tokens = 0;
       this.star_tokens = 0;
       this.score = 0;
@@ -667,17 +667,17 @@
     }
 
     // 「ラウンド終了」（スタッフ操作）。いまのラウンドの星の数を記録して、星を 0 に戻し、次のラウンドへ進む。
-    // チュートリアル中（round_num 0）は「チュートリアル終了」: 雷4・星0・月0に戻して、ラウンド1へ進む。
+    // チュートリアル中（round_num 0）は「チュートリアル終了」: 雷0・月1・星0にして、ラウンド1へ進む。
     // R4 を終えると round_num は 5（全ラウンド終了）になる。Undo で戻せる
     endRound() {
       if (this.round_num > STAR_ROUND_COUNT) return false;
       if (this.round_num === 0) {
-        this.lightning_tokens = 4;
-        this.moon_tokens = 0;
+        this.lightning_tokens = 0;
+        this.moon_tokens = 1;
         this.star_tokens = 0;
         this.round_num = 1;
         this.updateScore();
-        this.saveState('チュートリアル終了（雷4・星0・月0にリセット）');
+        this.saveState('チュートリアル終了（雷0・月1・星0にリセット）');
         return true;
       }
       const index = this.round_num - 1;
@@ -816,7 +816,7 @@
       const isInitialState =
         this.cards.length === 0 &&
         this.completed_cards.length === 0 &&
-        this.lightning_tokens === 4 &&
+        this.lightning_tokens === 0 &&
         this.moon_tokens === 0 &&
         this.star_tokens === 0 &&
         this.score === 0 &&
@@ -859,7 +859,7 @@
     }
 
     restoreState(state) {
-      this.lightning_tokens = state.lightning_tokens !== undefined ? state.lightning_tokens : 4;
+      this.lightning_tokens = state.lightning_tokens !== undefined ? state.lightning_tokens : 0;
       this.moon_tokens = state.moon_tokens !== undefined ? state.moon_tokens : 0;
       this.star_tokens = state.star_tokens !== undefined ? state.star_tokens : 0;
       this.score = state.score !== undefined ? state.score : 0;
@@ -885,7 +885,7 @@
     resetToInitial() {
       this.cards = [];
       this.completed_cards = [];
-      this.lightning_tokens = 4;
+      this.lightning_tokens = 0;
       this.moon_tokens = 0;
       this.star_tokens = 0;
       this.score = 0;
@@ -924,7 +924,7 @@
         timestamp: state.timestamp !== undefined ? state.timestamp : '',
         cards: state.cards || [],
         completed_cards: state.completed_cards || [],
-        lightning_tokens: state.lightning_tokens !== undefined ? state.lightning_tokens : 4,
+        lightning_tokens: state.lightning_tokens !== undefined ? state.lightning_tokens : 0,
         moon_tokens: state.moon_tokens !== undefined ? state.moon_tokens : 0,
         star_tokens: state.star_tokens !== undefined ? state.star_tokens : 0,
       }));

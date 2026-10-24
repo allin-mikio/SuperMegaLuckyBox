@@ -286,7 +286,7 @@ class LuckyBoxGame:
     def __init__(self):
         self.cards = []  # 使用中のビンゴカード（アクティブ）
         self.completed_cards = []  # コンプリート済みカード
-        self.lightning_tokens = 4  # 雷トークン数
+        self.lightning_tokens = 0  # 雷トークン数
         self.moon_tokens = 0  # 月トークン数
         self.star_tokens = 0  # 星トークン数
         self.score = 0  # 得点
@@ -965,7 +965,7 @@ class LuckyBoxGame:
             # 初期状態（カード0枚、トークン初期値）の場合は履歴に保存しない
             is_initial_state = (len(self.cards) == 0 and 
                               len(self.completed_cards) == 0 and 
-                              self.lightning_tokens == 4 and 
+                              self.lightning_tokens == 0 and 
                               self.moon_tokens == 0 and 
                               self.star_tokens == 0 and
                               self.score == 0 and
@@ -1039,7 +1039,7 @@ class LuckyBoxGame:
         # ゲーム状態を復元
         self.current_number = state.get('current_number')
         self.current_lightning_used = state.get('current_lightning_used', 0)  # 雷使用情報を復元
-        self.lightning_tokens = state.get('lightning_tokens', 4)
+        self.lightning_tokens = state.get('lightning_tokens', 0)
         self.moon_tokens = state.get('moon_tokens', 0)
         self.star_tokens = state.get('star_tokens', 0)
         self.score = state.get('score', 0)
@@ -1128,7 +1128,7 @@ class LuckyBoxGame:
         # ゲーム状態を初期化（__init__メソッドと同様）
         self.cards = []
         self.completed_cards = []
-        self.lightning_tokens = 4  # 雷トークン数
+        self.lightning_tokens = 0  # 雷トークン数
         self.moon_tokens = 0  # 月トークン数
         self.star_tokens = 0  # 星トークン数
         self.score = 0  # 得点
@@ -1202,7 +1202,7 @@ class LuckyBoxGame:
                     'timestamp': state.get('timestamp', ''),
                     'cards': state.get('cards', []),  # カードデータも含める
                     'completed_cards': state.get('completed_cards', []),
-                    'lightning_tokens': state.get('lightning_tokens', 4),
+                    'lightning_tokens': state.get('lightning_tokens', 0),
                     'moon_tokens': state.get('moon_tokens', 0),
                     'star_tokens': state.get('star_tokens', 0)
                 })

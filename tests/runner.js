@@ -131,7 +131,7 @@
     s3.setItem('luckybox.state.a', 'garbage');
     s3.setItem('luckybox.state.b', '{"v":1}');
     const a4 = new LocalApi({ storage: s3 });
-    check('保存データが全滅しても起動できる', a4.restored === false && a4.call('get_state').lightning_tokens === 4);
+    check('保存データが全滅しても起動できる', a4.restored === false && a4.call('get_state').lightning_tokens === 0);
 
     // オールリセットも保存される
     const s4 = new FakeStorage();

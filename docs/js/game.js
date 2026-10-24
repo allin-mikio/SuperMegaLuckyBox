@@ -357,7 +357,7 @@ class LuckyBoxUI {
         if (round > 4) return;
         const star = this.gameState.star_tokens || 0;
         const message = round === 0
-            ? 'チュートリアルを終了しますか？\n雷 4・星 0・月 0 に戻して、ラウンド1を始めます。'
+            ? 'チュートリアルを終了しますか？\n雷 0・月 1・星 0 にして、ラウンド1を始めます。'
             : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します。`;
         if (this._endingRound || !confirm(message)) return;
 
@@ -1384,9 +1384,11 @@ class LuckyBoxUI {
             // コンプリートのプールに入っていて、かつ「Complete」ボタンでカレントから外されたカードだけを表示する
             // （全マスが埋まっただけで、まだボタンを押していないカードは、盤面に残っている）
             const activeIds = new Set((this.gameState.cards || []).map((c) => c.card_id));
-            // チュートリアルカードは、コンプリートへ送っても、ここには表示しない
+            // チュートリアルカードは、チュートリアル中（round_num 0）はコンプリートに表示する。
+            // 「チュートリアル終了」を押したあと（round_num 1 以上）は非表示にする（Undo で戻せば再び表示される）
+            const tutorialDone = (this.gameState.round_num || 0) >= 1;
             const cards = (this.gameState.completed_cards || [])
-                .filter((c) => !activeIds.has(c.card_id) && c.card_id !== 'Tutorial');
+                .filter((c) => !activeIds.has(c.card_id) && !(tutorialDone && c.card_id === 'Tutorial'));
             this.completedCards = cards;
 
             if (!cards.length) {
