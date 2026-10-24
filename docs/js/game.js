@@ -235,7 +235,7 @@ class LuckyBoxUI {
     
     // 雷トークンの表示（Bingo Cards 見出しの右）。
     // 持っている数だけ⚡を並べ、ユーザーが使うときに⚡をタップすると1つ減る（使用の宣言自体はアプリの管理外）。
-    // スタッフモードでは、末尾の「＋」で1つ増やせる（数え間違いの修正用）。
+    // 個数と、スタッフ用の「−／＋」（数え間違いの修正用）は、見出しの左の枠（#token-hud と同じ作り）にある。
     setupLightningTray() {
         const tray = document.getElementById('lightning-tray');
         if (!tray) return;
@@ -243,8 +243,6 @@ class LuckyBoxUI {
         tray.addEventListener('click', (event) => {
             if (event.target.closest('.lightning-token')) {
                 this.adjustTokens('lightning', -1);
-            } else if (event.target.closest('.lightning-add')) {
-                this.adjustTokens('lightning', 1);
             }
         });
     }
@@ -258,25 +256,24 @@ class LuckyBoxUI {
         if (this._lightningShown === count && tray.childElementCount) return;
         this._lightningShown = count;
 
-        const icons = `<button type="button" class="lightning-token" aria-label="雷を1つ使う">${this.getBonusIcon('lightning')}</button>`.repeat(count);
-        const countLabel = `<span class="lightning-count" aria-label="雷 ${count}個">${count}</span>`;
-        const add = '<button type="button" class="lightning-add staff-only" aria-label="雷を1つ増やす">＋</button>';
-        tray.innerHTML = icons + countLabel + add;
+        // 個数の表示と「−／＋」は、見出しの左の枠（星・月と同じ作り）に移した。ここはアイコンだけ
+        tray.innerHTML = `<button type="button" class="lightning-token" aria-label="雷を1つ使う">${this.getBonusIcon('lightning')}</button>`.repeat(count);
     }
 
     /* ---------------- 星・月の表示（ユーザーモードでも見える）とラウンド終了 ---------------- */
     // 星: いまのラウンドの獲得数（ラウンド終了で 0 に戻る）。月: 獲得数の合計。
     // スタッフモードでは、謎解きパートで増えた分を入力する「−／＋」と、「ラウンド終了」ボタンも出る。
     setupTokenHud() {
-        const hud = document.getElementById('token-hud');
-        if (!hud) return;
-
         const starIcon = document.getElementById('hud-star-icon');
         const moonIcon = document.getElementById('hud-moon-icon');
+        const lightningIcon = document.getElementById('hud-lightning-icon');
         if (starIcon) starIcon.innerHTML = this.getBonusIcon('star');
         if (moonIcon) moonIcon.innerHTML = this.getBonusIcon('moon');
+        if (lightningIcon) lightningIcon.innerHTML = this.getBonusIcon('lightning');
 
-        hud.addEventListener('click', (event) => {
+        // 星・月・雷の「−／＋」と「ラウンド終了」は、置き場所が分かれている（HUD・進捗の右・Bingo Cards 見出し）ので、
+        // document でまとめて受ける
+        document.addEventListener('click', (event) => {
             const adjustBtn = event.target.closest('[data-hud-adjust]');
             if (adjustBtn) {
                 this.adjustTokens(adjustBtn.dataset.hudAdjust, Number(adjustBtn.dataset.amount));
@@ -292,6 +289,7 @@ class LuckyBoxUI {
         if (!this.gameState) return;
         const star = this.gameState.star_tokens || 0;
         const moon = this.gameState.moon_tokens || 0;
+        const lightning = Math.max(0, this.gameState.lightning_tokens || 0);
         // round_num: 0 = チュートリアル中、1〜4 = ラウンド1〜4、5 = 全ラウンド終了
         const round = this.gameState.round_num ?? 1;
         const finished = round > 4;
@@ -303,6 +301,7 @@ class LuckyBoxUI {
         };
         setText('hud-star-count', star);
         setText('hud-moon-count', moon);
+        setText('hud-lightning-count', lightning);
         // 進捗が変わったら（「ラウンド終了」・Undo など）、カード追加のリストも、その進捗のカードに切り替える
         // （例: 「ラウンド2 終了」を押すと、ラウンド3カードのリストになる）。最初の表示では切り替えない
         if (this._progressRound !== undefined && this._progressRound !== round) {
@@ -344,6 +343,8 @@ class LuckyBoxUI {
         const moonMinus = document.querySelector('[data-hud-adjust="moon"][data-amount="-1"]');
         if (starMinus) starMinus.disabled = star <= 0;
         if (moonMinus) moonMinus.disabled = moon <= 0;
+        const lightningMinus = document.querySelector('[data-hud-adjust="lightning"][data-amount="-1"]');
+        if (lightningMinus) lightningMinus.disabled = lightning <= 0;
     }
 
     // 「チュートリアルカード」の選択肢は、チュートリアル中（オールリセット後〜チュートリアル終了まで）だけ出す。

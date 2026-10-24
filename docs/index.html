@@ -171,7 +171,16 @@
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">
                 <div class="section-header">
-                    <h2>🗂️ Bingo Cards</h2>
+                    <h2>🗂️ LB Cards</h2>
+                    <!-- 雷の個数と「−／＋」（星・月と同じ作り。−／＋はスタッフモードのみ） -->
+                    <div class="token-hud-item lightning-hud-item">
+                        <span id="hud-lightning-icon" class="token-hud-icon"></span>
+                        <span id="hud-lightning-count" class="token-hud-count">0</span>
+                        <span class="token-hud-adjust staff-only">
+                            <button type="button" class="token-hud-btn" data-hud-adjust="lightning" data-amount="-1" aria-label="雷を1つ減らす">−</button>
+                            <button type="button" class="token-hud-btn" data-hud-adjust="lightning" data-amount="1" aria-label="雷を1つ増やす">＋</button>
+                        </span>
+                    </div>
                     <!-- 雷トークン：持っている数だけ⚡を並べる。使うときにタップすると1つ減る（中身は game.js が作る） -->
                     <div id="lightning-tray" class="lightning-tray" role="group" aria-label="雷"></div>
                 </div>
