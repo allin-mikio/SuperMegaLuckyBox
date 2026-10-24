@@ -25,9 +25,13 @@
         <span class="staff-banner-title">🔧 スタッフモード</span>
         <span id="staff-countdown" class="staff-countdown"></span>
         <!-- 戻る先を選べる（トラブル対応でスタッフモードに入ったときも、どちらのパートへも戻れる）。
-             次に来るはずのパートのボタンが濃い色（btn-primary）になる。謎解きパートのボタンは、ラウンド1〜4のときだけ出る -->
-        <button id="staff-exit-puzzle-btn" class="btn btn-secondary btn-inline" type="button" data-exit-part="puzzle">ユーザーモード(謎解きパート)に戻る</button>
-        <button id="staff-exit-btn" class="btn btn-primary btn-inline" type="button" data-exit-part="bingo">ユーザーモード(ビンゴパート)に戻る</button>
+             2行目に左右で並べる。色はユーザーモードのパート表示と同じ（謎解き = オレンジ / ビンゴ = 青）。
+             無操作で自動で戻るときの戻り先（スタッフモードに入る前のパート）のボタンには、白い枠が付く（is-auto）。
+             謎解きパートのボタンは、ラウンド1〜4のときだけ出る -->
+        <div class="staff-exit-row">
+            <button id="staff-exit-puzzle-btn" class="staff-exit-btn is-puzzle" type="button" data-exit-part="puzzle">ユーザーモード(謎解きパート)に戻る</button>
+            <button id="staff-exit-btn" class="staff-exit-btn is-bingo" type="button" data-exit-part="bingo">ユーザーモード(ビンゴパート)に戻る</button>
+        </div>
     </div>
 
     <!-- スタッフモードへ入るための暗証番号入力 -->

@@ -9,6 +9,7 @@ class LuckyBoxUI {
         this.bonusSelection = null;
         // ラウンド1〜4の「パート」: 'puzzle' = 謎解きパート / 'bingo' = ビンゴパート（チュートリアル・全ラウンド終了後も 'bingo'）。
         // 流れ: スタッフモード → ユーザーモード(謎解き) → スタッフモード → ユーザーモード(ビンゴ) → …（ラウンド終了で次の謎解きへ）。
+        // スタッフモードに入っても、パートは変えない（無操作で自動で戻るときは、入る前のパートへ戻る。手動なら、帯のボタンで選ぶ）。
         // 謎解きパートのユーザーモードは、バージョン表示以外の全てのタップを無効にする（CSS: body.puzzle-part）
         this.part = 'bingo';
         // ビンゴパート（ユーザーモード）の流れ: ① 司会の読み上げ番号を選ぶ → ② 盤面のその数字を1マスだけタップ
@@ -38,12 +39,6 @@ class LuckyBoxUI {
                 this.stickerEdit = null;
                 if (this.gameState) this.updateDisplay();
             }
-            // 謎解きパートが終わってスタッフモードに入ったら、次に来るはずのパートはビンゴパート
-            // （戻るボタンは両方出る。トラブル対応のときは、謎解きパートへ戻ることもできる）
-            if (event.detail.on && this.part === 'puzzle') {
-                this._setPart('bingo');
-                this.renderTokenHud();
-            }
         });
         // 「ユーザーモード(○○パート)に戻る」で選んだパートへ戻る（staff.js が、ユーザーモードへ戻る直前に知らせる）
         document.addEventListener('staffexitpart', (event) => {
@@ -61,22 +56,20 @@ class LuckyBoxUI {
     // パートの見た目を反映する。保存はしない。
     //   ・画面のロック（謎解きパートのとき）
     //   ・スタッフモードの帯の「ユーザーモード(○○パート)に戻る」2つのボタン:
-    //     次に来るはずのパート（this.part）のほうを濃い色にする。謎解きパートのボタンは、ラウンド1〜4のときだけ出す
+    //     スタッフモードに入る前のパート（this.part。スタッフモード中は変えない）のほうに白い枠を付ける。
+    //     無操作で自動で戻るときは、そのパートへ戻る。謎解きパートのボタンは、ラウンド1〜4のときだけ出す
     _applyPartDom() {
         document.body.classList.toggle('puzzle-part', this.part === 'puzzle');
         const round = this.gameState ? (this.gameState.round_num ?? 1) : 0;
         const hasPuzzle = round >= 1 && round <= 4;
         const puzzleBtn = document.getElementById('staff-exit-puzzle-btn');
         const bingoBtn = document.getElementById('staff-exit-btn');
+        const autoPuzzle = this.part === 'puzzle' && hasPuzzle;
         if (puzzleBtn) {
             puzzleBtn.hidden = !hasPuzzle;
-            puzzleBtn.classList.toggle('btn-primary', this.part === 'puzzle');
-            puzzleBtn.classList.toggle('btn-secondary', this.part !== 'puzzle');
+            puzzleBtn.classList.toggle('is-auto', autoPuzzle);
         }
-        if (bingoBtn) {
-            bingoBtn.classList.toggle('btn-primary', this.part !== 'puzzle' || !hasPuzzle);
-            bingoBtn.classList.toggle('btn-secondary', this.part === 'puzzle' && hasPuzzle);
-        }
+        if (bingoBtn) bingoBtn.classList.toggle('is-auto', !autoPuzzle);
     }
 
     /* ---------------- ビンゴパートの流れ（① 番号 → ② 盤面 → ③ ボーナス） ---------------- */
