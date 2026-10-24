@@ -57,6 +57,7 @@ class LuckyBoxUI {
     /* ---------------- 自動 Complete（試験機能） ----------------
      * カードが全マス黒（Complete ボタンが出ている）で、かつボーナス欄がすべてグレー（使用済み）になったら、
      * AUTO_COMPLETE_MS ミリ秒後に、自動で Complete ボタンと同じ処理（コンプリート欄へ移動）をする。
+     * 移すのは、ビンゴパートの「① 番号待ち」のときだけ（ボーナス処理中・盤面タップの途中・スタッフモードでは移さない）。
      * 待っているあいだに条件が崩れたら（Undo など）取りやめる。
      * 移るときは、カードがコンプリート欄へ飛ぶアニメーションを付ける（flyCardToCompleted）。
      * 戻したい（無効にしたい）ときは、AUTO_COMPLETE_MS を 0 にする。アニメーションだけ消すなら AUTO_COMPLETE_ANIM_MS を 0 にする。
@@ -93,21 +94,32 @@ class LuckyBoxUI {
         return { ready, all };
     }
 
+    // 自動 Complete をしてよい場面か: 流れの制限がかかるビンゴパート（ユーザーモード）で、
+    // ① 番号待ち（有効なボーナスがなく、ボーナス選択中でもなく、読み上げ番号も未選択）のとき
+    isAutoCompleteTiming() {
+        if (!this.flowEnforced() || this.isMarkingCell) return false;
+        return !this.bonusSelection && this.getPendingBonuses().length === 0 && this.calledNumber === null;
+    }
+
     checkAutoComplete() {
         if (!this._autoCompleteTimers) return;
         const { ready, all } = this.findAutoCompleteReady();
         const readySet = new Set(ready);
+        // 移すのは、ビンゴパートの「① 番号待ち」のときだけ（ボーナスや盤面タップの途中では移さない）
+        const waiting = this.isAutoCompleteTiming();
 
-        // 条件が崩れたカード: 待ちを取りやめる。（自動で移したあとの「戻った直後」の扱いも、ここで解く）
+        // 条件が崩れたカード（や、番号待ちでなくなったとき）: 待ちを取りやめる
         this._autoCompleteTimers.forEach((timer, id) => {
-            if (!readySet.has(id)) {
+            if (!waiting || !readySet.has(id)) {
                 clearTimeout(timer);
                 this._autoCompleteTimers.delete(id);
             }
         });
+        // 自動で移したカードが、Undo で戻ったあとに条件が崩れたら、また自動の対象に戻す
         this._autoCompleteDone.forEach((id) => {
             if (all.has(id) && !readySet.has(id)) this._autoCompleteDone.delete(id);
         });
+        if (!waiting) return;
 
         ready.forEach((id) => {
             if (this._autoCompleteTimers.has(id) || this._autoCompleteDone.has(id)) return;
@@ -181,7 +193,7 @@ class LuckyBoxUI {
             this._autoCompleteTimers.set(cardId, setTimeout(() => this.runAutoComplete(cardId), 500));
             return;
         }
-        if (!this.findAutoCompleteReady().ready.includes(cardId)) return;
+        if (!this.isAutoCompleteTiming() || !this.findAutoCompleteReady().ready.includes(cardId)) return;
         const cards = (this.gameState && this.gameState.cards) || [];
         const index = cards.findIndex((card) => card.card_id === cardId);
         if (index < 0) return;
@@ -339,6 +351,7 @@ class LuckyBoxUI {
             this.lightningReserved = 0;
             this.renderLightningTray();
             this.applyBonusHighlight();
+            this.checkAutoComplete();
             return;
         }
 
@@ -405,6 +418,8 @@ class LuckyBoxUI {
         if (skipBtn) skipBtn.hidden = !(phase === 'bonus' && noTarget.length > 0);
 
         this.applyBonusHighlight();
+        // 流れの状態（番号待ちかどうか）が変わったので、自動 Complete の条件も確認し直す
+        this.checkAutoComplete();
     }
 
     // 押せないマスをタップしたとき、モード表示を一瞬ゆらして、いまの操作を知らせる
