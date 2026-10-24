@@ -97,7 +97,9 @@ class LuckyBoxUI {
     // 自動 Complete をしてよい場面か: 流れの制限がかかるビンゴパート（ユーザーモード）で、
     // ① 番号待ち（有効なボーナスがなく、ボーナス選択中でもなく、読み上げ番号も未選択）のとき
     isAutoCompleteTiming() {
-        if (!this.flowEnforced() || this.isMarkingCell) return false;
+        // （マスの処理中かどうかは、ここでは見ない。処理中に見ると、処理が終わったあとに確認し直す機会がなく、いつまでも移らないため。
+        //   処理中に実行時刻が来たときは、runAutoComplete が少し待つ）
+        if (!this.flowEnforced()) return false;
         return !this.bonusSelection && this.getPendingBonuses().length === 0 && this.calledNumber === null;
     }
 
@@ -1783,6 +1785,7 @@ class LuckyBoxUI {
             alert(`エラーが発生しました: ${error.message}`);
         } finally {
             this.isMarkingCell = false;
+            this.checkAutoComplete(); // 処理が終わったので、自動 Complete の条件を確認し直す
         }
     }
 
