@@ -44,11 +44,36 @@
   });
   window.__hadController = !!navigator.serviceWorker.controller;
 
+  // 更新の確認。ホーム画面のアプリ（特に iPad）は、閉じても終了せず、バックグラウンドから戻るだけのことが多く、
+  // その場合は load が起きないので、「画面が前面に戻ったとき」にも確認する（間隔をあけた定期確認はしない）。
+  // 短時間に何度も呼ばないよう、前回の確認から 30 秒以内は無視する
+  let swRegistration = null;
+  let lastCheck = 0;
+  function checkForUpdate() {
+    if (!swRegistration) return;
+    const now = Date.now();
+    if (now - lastCheck < 30 * 1000) return;
+    lastCheck = now;
+    swRegistration.update().catch(() => {}); // オフライン時は失敗しても問題なし
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+  // ブラウザの「戻る／進む」キャッシュから復元されたときも確認する
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) checkForUpdate();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('sw.js')
+      // updateViaCache: 'none' … sw.js だけでなく、sw.js が読み込む version.js も、ブラウザの HTTP キャッシュを通さず、
+      // 毎回サーバーの最新を確認する（GitHub Pages のキャッシュ期間のあいだ、古い version.js で「変更なし」と
+      // 判定されるのを防ぐ）
+      .register('sw.js', { updateViaCache: 'none' })
       .then((registration) => {
+        swRegistration = registration;
         // 起動のたびに更新を確認（オフライン時は失敗しても問題なし）
+        lastCheck = Date.now();
         registration.update().catch(() => {});
 
         if (registration.waiting && navigator.serviceWorker.controller) {
