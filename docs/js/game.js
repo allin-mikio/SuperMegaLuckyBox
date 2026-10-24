@@ -27,6 +27,7 @@ class LuckyBoxUI {
         this.setupScoreSubmit();
         this.setupTokenHud();
         this.setupCallPanel();
+        this.setupAutoComplete();
         // スタッフモードに入ったら、ボーナスの選択（自動選択を含む）は解除する。スタッフモードでは、流れの制限をかけない。
         // 出たら、いまの状態から流れを組み立て直す
         document.addEventListener('staffmodechange', (event) => {
@@ -51,6 +52,149 @@ class LuckyBoxUI {
     // パートの表示名
     static get PART_LABELS() {
         return { puzzle: '謎解きパート', bingo: 'ビンゴパート' };
+    }
+
+    /* ---------------- 自動 Complete（試験機能） ----------------
+     * カードが全マス黒（Complete ボタンが出ている）で、かつボーナス欄がすべてグレー（使用済み）になったら、
+     * AUTO_COMPLETE_MS ミリ秒後に、自動で Complete ボタンと同じ処理（コンプリート欄へ移動）をする。
+     * 待っているあいだに条件が崩れたら（Undo など）取りやめる。
+     * 移るときは、カードがコンプリート欄へ飛ぶアニメーションを付ける（flyCardToCompleted）。
+     * 戻したい（無効にしたい）ときは、AUTO_COMPLETE_MS を 0 にする。アニメーションだけ消すなら AUTO_COMPLETE_ANIM_MS を 0 にする。
+     */
+    static get AUTO_COMPLETE_MS() {
+        return 500;
+    }
+
+    setupAutoComplete() {
+        const container = document.getElementById('cards-container');
+        if (!container || LuckyBoxUI.AUTO_COMPLETE_MS <= 0) return;
+        this._autoCompleteTimers = new Map(); // カードID → タイマー
+        this._autoCompleteDone = new Set();   // 自動で移したカードID（Undo で戻ったとき、すぐまた移さないため）
+        // 盤面の描き直し・ボーナス欄の色の変化は、どの経路でもここに集まる。確認だけの軽い処理なので、そのつど呼ぶ
+        new MutationObserver(() => this.checkAutoComplete()).observe(container, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class']
+        });
+    }
+
+    // いま画面にあるカードのうち、自動 Complete の条件を満たしているカードのID
+    findAutoCompleteReady() {
+        const ready = [];
+        const all = new Set();
+        document.querySelectorAll('#cards-container .bingo-card').forEach((cardEl) => {
+            const id = cardEl.dataset.cardId;
+            all.add(id);
+            const ok = !!cardEl.querySelector('.complete-btn') &&
+                Array.from(cardEl.querySelectorAll('.bonus-cell')).every((el) => el.classList.contains('used'));
+            if (ok) ready.push(id);
+        });
+        return { ready, all };
+    }
+
+    checkAutoComplete() {
+        if (!this._autoCompleteTimers) return;
+        const { ready, all } = this.findAutoCompleteReady();
+        const readySet = new Set(ready);
+
+        // 条件が崩れたカード: 待ちを取りやめる。（自動で移したあとの「戻った直後」の扱いも、ここで解く）
+        this._autoCompleteTimers.forEach((timer, id) => {
+            if (!readySet.has(id)) {
+                clearTimeout(timer);
+                this._autoCompleteTimers.delete(id);
+            }
+        });
+        this._autoCompleteDone.forEach((id) => {
+            if (all.has(id) && !readySet.has(id)) this._autoCompleteDone.delete(id);
+        });
+
+        ready.forEach((id) => {
+            if (this._autoCompleteTimers.has(id) || this._autoCompleteDone.has(id)) return;
+            this._autoCompleteTimers.set(id, setTimeout(() => this.runAutoComplete(id), LuckyBoxUI.AUTO_COMPLETE_MS));
+        });
+    }
+
+    // 移動アニメーションの長さ（ミリ秒）。0 にするとアニメーションなし
+    static get AUTO_COMPLETE_ANIM_MS() {
+        return 1100;
+    }
+
+    // 移動アニメーション: 盤面にあったカードの「コピー」を、元の位置からコンプリート欄の新しい位置へ飛ばす。
+    // 本物のカードは、これまでどおり一瞬で移る（コピーは見た目だけ。動かすのは transform / opacity だけなので軽い）。
+    // コンプリート欄が画面の外にあるときは、画面の下の端へ向かって小さくなりながら消える。
+    flyCardToCompleted(clone, from, cardId) {
+        const duration = LuckyBoxUI.AUTO_COMPLETE_ANIM_MS;
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!clone || !from || duration <= 0 || reduce || typeof clone.animate !== 'function') return;
+
+        const target = document.querySelector(`#completed-cards-container .bingo-card[data-card-id="${cardId}"]`);
+        if (!target) return;
+        const to = target.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const onScreen = to.bottom > 0 && to.top < vh;
+
+        let toCx = to.left + to.width / 2;
+        let toCy = to.top + to.height / 2;
+        if (!onScreen) toCy = to.top >= vh ? vh - 24 : 24; // 画面の外: 近いほうの端へ向かう
+        const scale = onScreen && from.width ? to.width / from.width : 0.3;
+        const dx = toCx - (from.left + from.width / 2);
+        const dy = toCy - (from.top + from.height / 2);
+
+        Object.assign(clone.style, {
+            position: 'fixed',
+            left: `${from.left}px`,
+            top: `${from.top}px`,
+            width: `${from.width}px`,
+            height: `${from.height}px`,
+            margin: '0',
+            zIndex: '800',
+            pointerEvents: 'none',
+            willChange: 'transform, opacity',
+            transformOrigin: 'center center'
+        });
+        // カードの幅の上限（--card-max）は、盤面欄の中にあるときだけ決まる。コピーは body の直下なので、元の幅をそのまま上限にする
+        clone.style.setProperty('--card-max', `${from.width}px`);
+        clone.removeAttribute('data-card-index');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.querySelectorAll('[onclick]').forEach((el) => el.removeAttribute('onclick'));
+        document.body.appendChild(clone);
+
+        // 画面内に着地するときは、本物のカードを飛行中だけ隠す（着地した瞬間に入れ替わって見える）
+        if (onScreen) target.style.visibility = 'hidden';
+        const finish = () => {
+            clone.remove();
+            target.style.visibility = '';
+        };
+        const anim = clone.animate([
+            { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+            { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, opacity: onScreen ? 1 : 0.15 }
+        ], { duration, easing: 'cubic-bezier(0.4, 0, 0.3, 1)', fill: 'forwards' });
+        anim.onfinish = finish;
+        anim.oncancel = finish;
+    }
+
+    async runAutoComplete(cardId) {
+        this._autoCompleteTimers.delete(cardId);
+        // 操作の途中（マスの処理中・シール編集中）は、少し待ってからやり直す
+        if (this.isMarkingCell || (this.stickerEdit && this.stickerEdit.cardId === cardId)) {
+            this._autoCompleteTimers.set(cardId, setTimeout(() => this.runAutoComplete(cardId), 500));
+            return;
+        }
+        if (!this.findAutoCompleteReady().ready.includes(cardId)) return;
+        const cards = (this.gameState && this.gameState.cards) || [];
+        const index = cards.findIndex((card) => card.card_id === cardId);
+        if (index < 0) return;
+        this._autoCompleteDone.add(cardId);
+
+        // 移動アニメーション用に、移る前のカードの位置と見た目（コピー）を控えておく
+        const cardEl = document.querySelector(`#cards-container .bingo-card[data-card-id="${cardId}"]`);
+        const from = cardEl ? cardEl.getBoundingClientRect() : null;
+        const clone = cardEl ? cardEl.cloneNode(true) : null;
+
+        const moved = await this.completeCard(index);
+        if (moved) this.flyCardToCompleted(clone, from, cardId);
+        else this._autoCompleteDone.delete(cardId);
     }
 
     // パートの見た目を反映する。保存はしない。
@@ -1406,20 +1550,22 @@ class LuckyBoxUI {
     }
 
     // 「Complete」ボタン: カードをカレントのプールから外して、コンプリートのプールへ移す
+    // 移せたら true
     async completeCard(cardIndex) {
         try {
             const result = await this.apiCall('complete_card', { card_index: cardIndex });
             if (result && result.success) {
                 this.gameState = result.game_state;
                 this.updateDisplay();
-            } else {
-                console.error('コンプリート移動失敗:', result);
-                alert(`Complete に失敗しました: ${result && result.error ? result.error : '全マスが埋まっていません'}`);
+                return true;
             }
+            console.error('コンプリート移動失敗:', result);
+            alert(`Complete に失敗しました: ${result && result.error ? result.error : '全マスが埋まっていません'}`);
         } catch (error) {
             console.error('コンプリート移動エラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
         }
+        return false;
     }
 
     async undo() {
