@@ -11,6 +11,9 @@ class LuckyBoxUI {
         // 流れ: スタッフモード → ユーザーモード(謎解き) → スタッフモード → ユーザーモード(ビンゴ) → …（ラウンド終了で次の謎解きへ）。
         // 謎解きパートのユーザーモードは、バージョン表示以外の全てのタップを無効にする（CSS: body.puzzle-part）
         this.part = 'bingo';
+        // ビンゴパート（ユーザーモード）の流れ: ① 司会の読み上げ番号を選ぶ → ② 盤面のその数字を1マスだけタップ
+        //   → ③ 数字・？のボーナスが有効になったら、すぐ使い切る → ①へ。選んだ読み上げ番号（'0'〜'9'）。未選択は null。保存しない
+        this.calledNumber = null;
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
@@ -18,6 +21,13 @@ class LuckyBoxUI {
         this.setupScoreInputs();
         this.setupScoreSubmit();
         this.setupTokenHud();
+        this.setupCallPanel();
+        // スタッフモードに入ったら、ボーナスの選択（自動選択を含む）は解除する。スタッフモードでは、流れの制限をかけない。
+        // 出たら、いまの状態から流れを組み立て直す
+        document.addEventListener('staffmodechange', (event) => {
+            if (event.detail.on) this.bonusSelection = null;
+            this.updateBingoFlow();
+        });
         // スタッフモードを終えたら、シール編集も終える
         document.addEventListener('staffmodechange', (event) => {
             if (!event.detail.on && this.stickerEdit) {
@@ -63,6 +73,138 @@ class LuckyBoxUI {
             bingoBtn.classList.toggle('btn-primary', this.part !== 'puzzle' || !hasPuzzle);
             bingoBtn.classList.toggle('btn-secondary', this.part === 'puzzle' && hasPuzzle);
         }
+    }
+
+    /* ---------------- ビンゴパートの流れ（① 番号 → ② 盤面 → ③ ボーナス） ---------------- */
+
+    isStaffNow() {
+        return document.body.classList.contains('staff-mode');
+    }
+
+    // 流れの制限をかける場面か: ユーザーモードのビンゴパート（チュートリアル〜ラウンド4）。スタッフモードでは制限しない
+    flowEnforced() {
+        if (!this.gameState || this.isStaffNow() || this.part !== 'bingo') return false;
+        const round = this.gameState.round_num ?? 1;
+        return round >= 0 && round <= 4;
+    }
+
+    // 有効になっている（まだ使っていない）数字・？のボーナス欄。盤面とコンプリート欄の両方から探す
+    getPendingBonuses() {
+        return Array.from(document.querySelectorAll('.bonus-cell.available[data-bonus-values]'))
+            .filter((el) => !el.dataset.tokenOnly);
+    }
+
+    // 盤面（カレントのカード）の、まだ黒くないマスのうち、values で押せるものがあるか
+    hasOpenCellFor(values) {
+        return Array.from(document.querySelectorAll('#cards-container .bingo-cell:not(.marked)'))
+            .some((cell) => this.isBonusTargetValue(cell.dataset.value, values));
+    }
+
+    hasBonusTarget(el) {
+        return this.hasOpenCellFor(el.dataset.bonusValues.split(','));
+    }
+
+    // 画面の「番号カード」（0〜9）を作り、操作を受ける
+    setupCallPanel() {
+        const numbers = document.getElementById('call-numbers');
+        if (numbers) {
+            numbers.innerHTML = Array.from({ length: 10 }, (_, n) =>
+                `<button type="button" class="call-num" data-num="${n}" aria-label="読み上げ番号 ${n}">${n}</button>`
+            ).join('');
+            numbers.addEventListener('click', (event) => {
+                const btn = event.target.closest('.call-num');
+                if (!btn || btn.disabled || !this.flowEnforced()) return;
+                // ボーナスを使い切るまでは、次の番号は選べない
+                if (this.getPendingBonuses().length) return;
+                // もう一度タップすると選択を取り消し。別の番号をタップすると選び直し
+                this.calledNumber = this.calledNumber === btn.dataset.num ? null : btn.dataset.num;
+                this.updateBingoFlow();
+            });
+        }
+        const cancelBtn = document.getElementById('flow-cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                this.calledNumber = null;
+                this.updateBingoFlow();
+            });
+        }
+        const skipBtn = document.getElementById('flow-skip-btn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => {
+                // 使える空きマスがないボーナスは、スキップ（使用済みにする）。操作履歴に残り、Undo で戻せる
+                this.getPendingBonuses()
+                    .filter((el) => !this.hasBonusTarget(el))
+                    .forEach((el) => this.toggleBonus(el));
+                this.updateBingoFlow();
+            });
+        }
+    }
+
+    // 流れの状態を、いまの盤面から組み立てて、画面（モード表示・番号カード・ボタン・強調）に反映する
+    updateBingoFlow() {
+        const panel = document.getElementById('call-panel');
+        if (!panel) return;
+        const enforced = this.flowEnforced();
+        panel.hidden = !enforced;
+        if (!enforced) {
+            this.applyBonusHighlight();
+            return;
+        }
+
+        // ③ 有効なボーナスがあれば、即時に使い切る。
+        // 有効になったボーナスマスは黄赤で点滅し、タップすると緑（選択）になって、押せる盤面のマスが強調される
+        const pending = this.getPendingBonuses();
+        const withTarget = pending.filter((el) => this.hasBonusTarget(el));
+        const noTarget = pending.filter((el) => !withTarget.includes(el));
+
+        let phase;
+        if (pending.length) phase = 'bonus';
+        else phase = this.calledNumber === null ? 'wait' : 'board';
+
+        let text;
+        let cls;
+        if (phase === 'wait') {
+            text = '① 司会の読み上げ番号を選んでください';
+            cls = 'is-wait';
+        } else if (phase === 'board') {
+            const hasCell = this.hasOpenCellFor([this.calledNumber]);
+            text = hasCell
+                ? `② 盤面の「${this.calledNumber}」を1マスタップ`
+                : `② 「${this.calledNumber}」の空きマスがありません（右のボタンで戻る）`;
+            cls = 'is-board';
+        } else {
+            if (this.bonusSelection) text = '③ ボーナス: 強調されたマスをタップ';
+            else if (withTarget.length) text = `③ ボーナス: 点滅しているボーナスマスをタップ（残り ${pending.length} 個）`;
+            else text = '③ ボーナス: 使える空きマスがありません（スキップしてください）';
+            cls = 'is-bonus';
+        }
+        const modeEl = document.getElementById('flow-mode');
+        if (modeEl) {
+            if (modeEl.textContent !== text) modeEl.textContent = text;
+            modeEl.className = `flow-mode ${cls}`;
+        }
+
+        // 番号カード: ボーナス処理中は押せない。選択中の番号は強調
+        document.querySelectorAll('#call-numbers .call-num').forEach((btn) => {
+            btn.disabled = phase === 'bonus';
+            btn.classList.toggle('is-selected', phase === 'board' && btn.dataset.num === this.calledNumber);
+        });
+
+        const cancelBtn = document.getElementById('flow-cancel-btn');
+        if (cancelBtn) cancelBtn.hidden = phase !== 'board';
+        const skipBtn = document.getElementById('flow-skip-btn');
+        if (skipBtn) skipBtn.hidden = !(phase === 'bonus' && noTarget.length > 0);
+
+        this.applyBonusHighlight();
+    }
+
+    // 押せないマスをタップしたとき、モード表示を一瞬ゆらして、いまの操作を知らせる
+    nudgeFlow() {
+        const modeEl = document.getElementById('flow-mode');
+        if (!modeEl) return;
+        modeEl.classList.remove('is-nudge');
+        void modeEl.offsetWidth; // アニメーションを最初からやり直す
+        modeEl.classList.add('is-nudge');
     }
 
     // パートを切り替えて、画面に反映し、保存する（HUD の再描画は呼び出し側）
@@ -1199,6 +1341,8 @@ class LuckyBoxUI {
                 : '直前の操作を取り消して戻します。\nよろしいですか？';
             if (!confirm(message)) return;
 
+            // Undo のあとは、読み上げ番号の選択を解除して、① 番号待ちから始める
+            this.calledNumber = null;
             const beforeKey = this.cardMembershipKey();
             const result = await this.apiCall('undo', {});
             
@@ -1268,6 +1412,8 @@ class LuckyBoxUI {
                 console.log('Reset成功');
                 // 前回の「使用済み」表示が次のゲームに残らないよう、手動トグル状態も消す
                 this.manualBonusStates.clear();
+                this.calledNumber = null;
+                this.bonusSelection = null;
                 this.gameState = result.game_state;
 
                 // リセット後は、最初の状態として「カード Tutorial」を追加し、ラウンドの選択を「チュートリアル」にする
@@ -1311,11 +1457,14 @@ class LuckyBoxUI {
             return;
         }
 
-        // 数字・？のボーナスを選択中は、明示されたマス以外は押せない
-        if (this.bonusSelection) {
+        // 数字・？のボーナスを選択中、またはビンゴパートの流れの中（読み上げ番号の選択前・ボーナス選択前も含む）は、
+        // 明示されたマス（bonus-target）以外は押せない
+        const enforced = this.flowEnforced();
+        if (this.bonusSelection || enforced) {
             const cardEl = document.querySelector(`#cards-container .bingo-card[data-card-index="${cardIndex}"]`);
             const cellEl = cardEl && cardEl.querySelector(`.bingo-cell[data-row="${row}"][data-col="${col}"]`);
             if (!cellEl || !cellEl.classList.contains('bonus-target')) {
+                if (enforced) this.nudgeFlow();
                 return;
             }
         }
@@ -1330,6 +1479,9 @@ class LuckyBoxUI {
         // 選択中のボーナスがあれば、このマスを押した時点で「使用済み」にする。
         // マスのマークより先に保存して、Undo でマスと一緒に元へ戻るようにする
         const consumedBonusKey = this.consumeBonusSelection();
+        // 読み上げ番号のマスをタップしたとき（ボーナスではないとき）は、番号の選択を終える（1回の読み上げにつき1マス）
+        const consumedCalled = (!consumedBonusKey && enforced && this.calledNumber !== null) ? this.calledNumber : null;
+        if (consumedCalled !== null) this.calledNumber = null;
 
         // 弱い端末向け: エンジン処理の前に黒塗りを見せて、タップ感を先に返す
         this.paintCellOptimistic(cardIndex, row, col);
@@ -1348,6 +1500,7 @@ class LuckyBoxUI {
             } else {
                 // 楽観更新を取り消すため、盤面を正式状態で描き直す
                 this.revertBonusConsume(consumedBonusKey);
+                if (consumedCalled !== null) this.calledNumber = consumedCalled;
                 this.updateDisplay();
                 const errorMsg = result ? (result.error || '不明なエラー') : 'レスポンスが無効です';
                 console.error(`セルマーク失敗: ${errorMsg}`);
@@ -1355,6 +1508,7 @@ class LuckyBoxUI {
             }
         } catch (error) {
             this.revertBonusConsume(consumedBonusKey);
+            if (consumedCalled !== null) this.calledNumber = consumedCalled;
             this.updateDisplay();
             console.error('セルマークエラー:', error);
             alert(`エラーが発生しました: ${error.message}`);
@@ -2211,6 +2365,8 @@ class LuckyBoxUI {
         this.updateTokenButtonStates();
         this.renderLightningTray();
         this.renderTokenHud();
+        // ビンゴパートの流れ（モード表示・番号カード・強調）。盤面の描画のあとに呼ばれるので、ここで組み立て直す
+        this.updateBingoFlow();
     }
 
     // ボーナスの状態を取得
@@ -2253,6 +2409,8 @@ class LuckyBoxUI {
     toggleBonusSelection(element) {
         const key = element.dataset.bonusKey;
         if (this.bonusSelection && this.bonusSelection.key === key) {
+            // ビンゴパートの流れの中では、有効なボーナスは即時に使い切る仕様なので、選択の解除はできない
+            if (this.flowEnforced()) return true;
             this.bonusSelection = null;
             this.applyBonusHighlight();
             return true;
@@ -2270,15 +2428,26 @@ class LuckyBoxUI {
 
     // 選択状態を画面に反映する（押せるマス: bonus-target、押せないマス: bonus-locked、選択中のボーナス欄: bonus-selected）。
     // 盤面を描き直さず、いまの画面（マスの data-value）だけを見て更新する
+    // 強調するマスの数字（？は全部）。ボーナス選択中はそのボーナスで押せる数字、
+    // ビンゴパートの流れの中で読み上げ番号を選んだあと（ボーナス処理中でないとき）は、その番号だけ。それ以外は null
+    getHighlightValues() {
+        if (this.bonusSelection) return this.bonusSelection.values;
+        if (this.flowEnforced() && this.calledNumber !== null && this.getPendingBonuses().length === 0) {
+            return [this.calledNumber];
+        }
+        return null;
+    }
+
     applyBonusHighlight() {
         const selection = this.bonusSelection;
+        const values = this.getHighlightValues();
         const container = document.getElementById('cards-container');
         if (container) {
-            container.classList.toggle('bonus-selecting', !!selection);
+            container.classList.toggle('bonus-selecting', !!values);
             container.querySelectorAll('.bingo-cell').forEach((cell) => {
                 cell.classList.remove('bonus-target', 'bonus-locked');
-                if (!selection || cell.classList.contains('marked')) return;
-                cell.classList.add(this.isBonusTargetValue(cell.dataset.value, selection.values) ? 'bonus-target' : 'bonus-locked');
+                if (!values || cell.classList.contains('marked')) return;
+                cell.classList.add(this.isBonusTargetValue(cell.dataset.value, values) ? 'bonus-target' : 'bonus-locked');
             });
         }
         document.querySelectorAll('.bonus-cell').forEach((el) => {

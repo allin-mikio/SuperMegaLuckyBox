@@ -187,6 +187,19 @@
                     <!-- 雷トークン：持っている数だけ⚡を並べる。使うときにタップすると1つ減る（中身は game.js が作る） -->
                     <div id="lightning-tray" class="lightning-tray" role="group" aria-label="雷"></div>
                 </div>
+                <!-- ビンゴパートの操作パネル（ユーザーモードのビンゴパートだけ表示）。
+                     ① 司会の読み上げ番号（0〜9）を選ぶ → ② 盤面のその数字を1マスタップ → ③ 数字・？のボーナスを使い切る → ①へ -->
+                <div id="call-panel" class="call-panel" hidden>
+                    <!-- モード表示とボタンは同じ行（ボタンの出入りで、下の表示が上下に動かないようにする） -->
+                    <div class="flow-bar">
+                        <div id="flow-mode" class="flow-mode is-wait" aria-live="polite"></div>
+                        <div class="call-actions">
+                            <button id="flow-cancel-btn" class="btn btn-secondary btn-inline" type="button" hidden>番号を選び直す／該当なし</button>
+                            <button id="flow-skip-btn" class="btn btn-warning btn-inline" type="button" hidden>ボーナスをスキップ（使える空きマスなし）</button>
+                        </div>
+                    </div>
+                    <div id="call-numbers" class="call-numbers" role="group" aria-label="読み上げ番号"></div>
+                </div>
                 <div id="cards-container">
                     <p class="no-cards">カードが追加されていません</p>
                 </div>

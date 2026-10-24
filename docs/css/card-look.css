@@ -383,6 +383,95 @@
 .progress-part.is-puzzle { background: #E65100; }
 .progress-part.is-bingo { background: #0277BD; }
 
+/* ビンゴパートの操作パネル: モード表示 + 番号カード（0〜9）+ ボタン */
+.call-panel {
+    margin: 0 0 14px;
+}
+.call-panel[hidden],
+.call-panel [hidden] {
+    display: none !important;
+}
+
+/* モード表示: ① 番号待ち（青）／ ② 盤面をタップ（赤橙）／ ③ ボーナス（緑） */
+.flow-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    min-height: 52px; /* ボタンが出入りしても、行の高さは変えない */
+    margin-bottom: 10px;
+}
+
+.flow-mode {
+    display: inline-block;
+    max-width: 100%;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    line-height: 1.3;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+.flow-mode.is-wait { background: #0277BD; }
+.flow-mode.is-board { background: #D84315; }
+.flow-mode.is-bonus { background: #2E7D32; }
+
+/* 押せないマスをタップしたとき、モード表示をゆらす */
+.flow-mode.is-nudge {
+    animation: flow-nudge 0.4s ease-in-out;
+}
+@keyframes flow-nudge {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+}
+
+/* 番号カード（数字カード風） */
+.call-numbers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.call-num {
+    width: 56px;
+    height: 68px;
+    border: 3px solid #7030A0;
+    border-radius: 10px;
+    background: #FFFFF4;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #333333;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.call-num:active {
+    transform: scale(0.94);
+}
+.call-num.is-selected {
+    background: #FFD54F;
+    border-color: #D84315;
+    color: #B71C1C;
+    transform: translateY(-4px) scale(1.08);
+}
+.call-num:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.call-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 /* 謎解きパートのユーザーモード: バージョン表示（スタッフモードへの入口）以外は、全てタップ無効 */
 body.puzzle-part:not(.staff-mode) .container > *:not(.version-badge) {
     pointer-events: none;
