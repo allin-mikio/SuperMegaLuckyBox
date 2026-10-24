@@ -1645,7 +1645,8 @@ class LuckyBoxUI {
     // マスマーク後の画面更新（全カード再構築を避け、触ったカードだけ差し替える）
     updateAfterMark(cardIndex) {
         this.loadBonusStates();
-        if (!this.replaceActiveCard(cardIndex)) {
+        if (this._redrawCompletedAfterMark || !this.replaceActiveCard(cardIndex)) {
+            this._redrawCompletedAfterMark = false;
             this.updateCardsDisplay();
         }
         // 得点・雷トレイは必要。履歴は次フレーム
@@ -1934,11 +1935,13 @@ class LuckyBoxUI {
         const createBonusCell = ({ type, index, bonus }) => {
             const bonuses = Array.isArray(bonus) ? bonus : (bonus ? [bonus] : []);
             const bonusItems = this.flattenBonusItems(bonuses);
-            const iconsHtml = this.formatBonusDisplay(bonuses);
+            let iconsHtml = this.formatBonusDisplay(bonuses);
             const bonusState = this.getBonusState(card, type, index);
             let bonusClass = bonusState === 'used' ? 'used'
                 : ((type === 'row' ? completedRows : completedCols).has(index) ? 'available' : '');
             const bonusKey = `${card.card_id}:${type}:${index}`;
+            // 数字・？を使える回数（「？2」のように複数あるマスは、その回数だけ使える）
+            const slots = bonusItems.filter((item) => item === 'wildcard' || item.startsWith('number_')).length;
 
             if (bonusClass === 'available') {
                 const initialClass = this.determineInitialBonusClass(bonusItems);
@@ -1948,7 +1951,26 @@ class LuckyBoxUI {
             }
 
             if (!bonusClass) {
-                this.manualBonusStates.delete(bonusKey);
+                for (let k = 1; k <= Math.max(slots, 1); k += 1) this.manualBonusStates.delete(this.bonusSlotKey(bonusKey, k));
+            } else if (slots >= 2) {
+                // 複数回使えるマス: 使った回数が全部に達したらグレー。途中は「有効」のまま、残りの回数だけを表示する
+                const usedCount = this.getBonusUseCount(bonusKey, slots);
+                if (usedCount >= slots) {
+                    bonusClass = 'used';
+                } else {
+                    bonusClass = 'available';
+                    if (usedCount > 0) {
+                        let toSkip = usedCount;
+                        const remaining = bonusItems.filter((item) => {
+                            if (toSkip > 0 && (item === 'wildcard' || item.startsWith('number_'))) {
+                                toSkip -= 1;
+                                return false;
+                            }
+                            return true;
+                        });
+                        iconsHtml = this.formatBonusDisplay(remaining);
+                    }
+                }
             } else {
                 const manualState = this.manualBonusStates.get(bonusKey);
                 if (manualState === 'used') {
@@ -1966,7 +1988,9 @@ class LuckyBoxUI {
             const selectValues = bonusItems
                 .filter((item) => item === 'wildcard' || item.startsWith('number_'))
                 .map((item) => (item === 'wildcard' ? '?' : item.slice('number_'.length)));
-            const valuesAttr = selectValues.length ? `data-bonus-values="${selectValues.join(',')}"` : '';
+            const valuesAttr = selectValues.length
+                ? `data-bonus-values="${selectValues.join(',')}" data-bonus-slots="${selectValues.length}"`
+                : '';
             const tokenOnlyAttr = this.isTokenOnlyBonus(bonusItems) ? 'data-token-only="1"' : '';
             return `
                 <div class="bonus-cell ${type}-bonus ${bonusClass}${this.isMoonStarBonus(bonusItems) ? ' bonus-pink' : ''}" 
@@ -2507,9 +2531,11 @@ class LuckyBoxUI {
 
         // 押せるマスが1つもないとき（数字・？を使える空きマスがない）だけ、タップで使用済み（グレー）にする。
         // この操作は操作履歴に1件として残し、Undo で元に戻せる
+        // 「？2」のように複数回使えるマスは、残りの回数をすべて使用済みにする
         element.classList.remove('available');
         element.classList.add('used');
-        this.manualBonusStates.set(bonusKey, 'used');
+        const slots = Number(element.dataset.bonusSlots) || 1;
+        for (let k = 1; k <= slots; k += 1) this.manualBonusStates.set(this.bonusSlotKey(bonusKey, k), 'used');
         const [cardId, type, index] = bonusKey.split(':');
         const place = `${type === 'row' ? '行' : '列'}${Number(index) + 1}`;
         this.saveBonusStates({ record: true, label: `ボーナス使用済み: ${cardId} ${place}` });
@@ -2539,9 +2565,23 @@ class LuckyBoxUI {
             .some((cell) => this.isBonusTargetValue(cell.dataset.value, values));
         if (!hasTarget) return false;
 
-        this.bonusSelection = { key, values };
+        this.bonusSelection = { key, values, slots: Number(element.dataset.bonusSlots) || 1 };
         this.applyBonusHighlight();
         return true;
+    }
+
+    // 複数回使えるボーナス欄（「？2」など）の、k 回目の使用を記録するキー。1回目は、これまでと同じキー
+    bonusSlotKey(key, k) {
+        return k <= 1 ? key : `${key}#${k}`;
+    }
+
+    // そのボーナス欄を、いま何回使っているか（最大 slots 回）
+    getBonusUseCount(key, slots) {
+        let count = 0;
+        for (let k = 1; k <= Math.max(slots, 1); k += 1) {
+            if (this.manualBonusStates.get(this.bonusSlotKey(key, k)) === 'used') count += 1;
+        }
+        return count;
     }
 
     // 選択状態を画面に反映する（押せるマス: bonus-target、押せないマス: bonus-locked、選択中のボーナス欄: bonus-selected）。
@@ -2579,15 +2619,33 @@ class LuckyBoxUI {
         if (!selection) return null;
         this.bonusSelection = null;
 
-        this.manualBonusStates.set(selection.key, 'used');
+        // 複数回使えるマス（「？2」など）は、まだ使っていない次の1回分だけを使用済みにする。
+        // 回数が残っているあいだは「有効」のまま（盤面の描き直しで、残りの回数の表示になる）
+        const slots = selection.slots || 1;
+        let usedKey = selection.key;
+        for (let k = 1; k <= slots; k += 1) {
+            const slotKey = this.bonusSlotKey(selection.key, k);
+            if (this.manualBonusStates.get(slotKey) !== 'used') {
+                usedKey = slotKey;
+                break;
+            }
+        }
+        this.manualBonusStates.set(usedKey, 'used');
         this.saveBonusStates();
+        const fullyUsed = this.getBonusUseCount(selection.key, slots) >= slots;
         const el = document.querySelector(`.bonus-cell[data-bonus-key="${selection.key}"]`);
         if (el) {
-            el.classList.remove('available', 'bonus-selected');
-            el.classList.add('used');
+            el.classList.remove('bonus-selected');
+            if (fullyUsed) {
+                el.classList.remove('available');
+                el.classList.add('used');
+            } else if (el.closest('#completed-cards-container')) {
+                // コンプリート欄のカードは、マークのあとの差し替え対象ではないので、残り回数の表示のために全体を描き直す
+                this._redrawCompletedAfterMark = true;
+            }
         }
         this.applyBonusHighlight();
-        return selection.key;
+        return usedKey;
     }
 
     // マスのマークに失敗したとき、使用済みにしたボーナスを元に戻す
@@ -2601,7 +2659,7 @@ class LuckyBoxUI {
     pruneBonusSelection() {
         const selection = this.bonusSelection;
         if (!selection) return;
-        let valid = this.manualBonusStates.get(selection.key) !== 'used' && !!this.gameState;
+        let valid = this.getBonusUseCount(selection.key, selection.slots || 1) < (selection.slots || 1) && !!this.gameState;
         if (valid) {
             const [cardId, type, index] = selection.key.split(':');
             const cards = (this.gameState.cards || []).concat(this.gameState.completed_cards || []);
