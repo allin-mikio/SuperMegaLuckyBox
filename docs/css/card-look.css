@@ -371,6 +371,23 @@
     text-shadow: 2px 2px 0 #FFD54F;
 }
 
+/* パート（謎解き / ビンゴ）: 進捗の右に出す札 */
+.progress-part {
+    padding: 2px 14px;
+    border-radius: 999px;
+    font-size: 0.55em;
+    font-weight: 900;
+    color: #FFFFFF;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+.progress-part.is-puzzle { background: #E65100; }
+.progress-part.is-bingo { background: #0277BD; }
+
+/* 謎解きパートのユーザーモード: バージョン表示（スタッフモードへの入口）以外は、全てタップ無効 */
+body.puzzle-part:not(.staff-mode) .container > *:not(.version-badge) {
+    pointer-events: none;
+}
+
 /* ラウンド終了ボタンのそばに出す、スプシ送信の結果 */
 .round-end-status {
     font-size: 0.9rem;

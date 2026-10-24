@@ -7,6 +7,10 @@ class LuckyBoxUI {
         this.manualBonusStates = new Map();
         // 選択中の数字・？ボーナス { key, values }。選択中だけ、押せるマスを明示し、それ以外のマスは押せない
         this.bonusSelection = null;
+        // ラウンド1〜4の「パート」: 'puzzle' = 謎解きパート / 'bingo' = ビンゴパート（チュートリアル・全ラウンド終了後も 'bingo'）。
+        // 流れ: スタッフモード → ユーザーモード(謎解き) → スタッフモード → ユーザーモード(ビンゴ) → …（ラウンド終了で次の謎解きへ）。
+        // 謎解きパートのユーザーモードは、バージョン表示以外の全てのタップを無効にする（CSS: body.puzzle-part）
+        this.part = 'bingo';
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
@@ -20,8 +24,52 @@ class LuckyBoxUI {
                 this.stickerEdit = null;
                 if (this.gameState) this.updateDisplay();
             }
+            // 謎解きパートが終わってスタッフモードに入ったら、次に来るはずのパートはビンゴパート
+            // （戻るボタンは両方出る。トラブル対応のときは、謎解きパートへ戻ることもできる）
+            if (event.detail.on && this.part === 'puzzle') {
+                this._setPart('bingo');
+                this.renderTokenHud();
+            }
+        });
+        // 「ユーザーモード(○○パート)に戻る」で選んだパートへ戻る（staff.js が、ユーザーモードへ戻る直前に知らせる）
+        document.addEventListener('staffexitpart', (event) => {
+            this._setPart(event.detail.part);
+            this.renderTokenHud();
         });
         this.initializeGame();
+    }
+
+    // パートの表示名
+    static get PART_LABELS() {
+        return { puzzle: '謎解きパート', bingo: 'ビンゴパート' };
+    }
+
+    // パートの見た目を反映する。保存はしない。
+    //   ・画面のロック（謎解きパートのとき）
+    //   ・スタッフモードの帯の「ユーザーモード(○○パート)に戻る」2つのボタン:
+    //     次に来るはずのパート（this.part）のほうを濃い色にする。謎解きパートのボタンは、ラウンド1〜4のときだけ出す
+    _applyPartDom() {
+        document.body.classList.toggle('puzzle-part', this.part === 'puzzle');
+        const round = this.gameState ? (this.gameState.round_num ?? 1) : 0;
+        const hasPuzzle = round >= 1 && round <= 4;
+        const puzzleBtn = document.getElementById('staff-exit-puzzle-btn');
+        const bingoBtn = document.getElementById('staff-exit-btn');
+        if (puzzleBtn) {
+            puzzleBtn.hidden = !hasPuzzle;
+            puzzleBtn.classList.toggle('btn-primary', this.part === 'puzzle');
+            puzzleBtn.classList.toggle('btn-secondary', this.part !== 'puzzle');
+        }
+        if (bingoBtn) {
+            bingoBtn.classList.toggle('btn-primary', this.part !== 'puzzle' || !hasPuzzle);
+            bingoBtn.classList.toggle('btn-secondary', this.part === 'puzzle' && hasPuzzle);
+        }
+    }
+
+    // パートを切り替えて、画面に反映し、保存する（HUD の再描画は呼び出し側）
+    _setPart(part) {
+        this.part = part === 'puzzle' ? 'puzzle' : 'bingo';
+        this._applyPartDom();
+        this.saveUiState();
     }
 
     // スタッフモード中に何か操作した場合、スタッフモードを終えるときに操作履歴（Undo用）を全部消す。
@@ -306,8 +354,16 @@ class LuckyBoxUI {
         // （例: 「ラウンド2 終了」を押すと、ラウンド3カードのリストになる）。最初の表示では切り替えない
         if (this._progressRound !== undefined && this._progressRound !== round) {
             this.syncRoundListToProgress(round);
+            // 「ラウンド終了」でラウンド1〜4に入ったら、そのラウンドは謎解きパートから始まる。
+            // それ以外（Undo で戻った・オールリセット・全ラウンド終了）は、ビンゴパート扱い（ロックしない）
+            const advanced = round > this._progressRound;
+            this._setPart(advanced && round >= 1 && round <= 4 ? 'puzzle' : 'bingo');
+        } else if (this._progressRound === undefined && this.part === 'puzzle' && (round < 1 || round > 4)) {
+            // 保存されたパートが、いまの進捗と合わないとき（リセット後など）は、ロックを外す
+            this._setPart('bingo');
         }
         this._progressRound = round;
+        this._applyPartDom(); // 戻るボタン（謎解きパートの有無・強調）を、いまの進捗に合わせる
         // 再起動後に復元した選択が「チュートリアル」のまま、チュートリアルが終わっている場合は、進捗のリストに直す
         if (round >= 1 && this.currentRound === 'tutorial') {
             this.syncRoundListToProgress(round);
@@ -326,9 +382,13 @@ class LuckyBoxUI {
         // 先頭にチーム名を付ける（例: 「チームB 全ラウンド終了」）。チームの変更は updateDisplay → ここで反映される
         const team = window.LuckyBoxEngine.getApi().getTeam();
         const progress = finished ? '全ラウンド終了' : (tutorial ? 'チュートリアル' : `ラウンド${round}`);
+        // ラウンド1〜4では、パート（謎解き / ビンゴ）も表示する
+        const partHtml = (!finished && !tutorial)
+            ? `<span class="progress-part is-${this.part}">${LuckyBoxUI.PART_LABELS[this.part]}</span>`
+            : '';
         const progressEl = document.getElementById('progress-label');
         if (progressEl) {
-            const html = `<span class="progress-team">チーム${team}</span><span class="progress-step">${progress}</span>`;
+            const html = `<span class="progress-team">チーム${team}</span><span class="progress-step">${progress}</span>${partHtml}`;
             if (progressEl.dataset.html !== html) {
                 progressEl.dataset.html = html;
                 progressEl.innerHTML = html;
@@ -1911,12 +1971,17 @@ class LuckyBoxUI {
             this.updateRoundSelectColor();
         }
 
+        // パート（謎解き / ビンゴ）。再起動しても、謎解きパート中ならそのまま（ロックされた状態）で始まる
+        this.part = saved.part === 'puzzle' ? 'puzzle' : 'bingo';
+        this._applyPartDom();
+
         // ボーナス欄の使用状態は、エンジン側（Undo と一緒に戻る）に保存しているので、ここでは扱わない
         this.loadBonusStates();
     }
 
     saveUiState() {
         window.LuckyBoxEngine.uiState.save({
+            part: this.part,
             currentRound: this.currentRound
         });
     }

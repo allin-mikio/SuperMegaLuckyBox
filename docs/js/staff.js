@@ -6,8 +6,8 @@
  *  - 起動直後は、タイトル画面でなければユーザーモード（スタッフモードの状態は保存しない）
  *  - スタッフモードへ入る: 画面右上のバージョン表示（ver.x.xx.xx）を長押し → 暗証番号を入力
  *    （タイトル画面にも同じバージョン表示があり、同じ操作で入る）
- *  - スタッフモードから戻る: ①帯の「ユーザーモードに戻る」ボタン（手動）
- *                            ②一定時間操作がなければ自動で戻る
+ *  - スタッフモードから戻る: ①帯の「ユーザーモード(謎解きパート / ビンゴパート)に戻る」ボタン（手動。戻る先を選ぶ）
+ *                            ②一定時間操作がなければ自動で戻る（次に来るはずのパートへ）
  *  - スタッフ専用の部品は、HTML側で class="staff-only" を付けたもの
  *    （ユーザーモードでは非表示。表示の切り替えは CSS: body.staff-mode）
  *
@@ -30,7 +30,6 @@
   const titleScreen = document.getElementById('title-screen');
   const banner = document.getElementById('staff-banner');
   const countdown = document.getElementById('staff-countdown');
-  const exitBtn = document.getElementById('staff-exit-btn');
   const overlay = document.getElementById('staff-pin-overlay');
   const form = document.getElementById('staff-pin-form');
   const pinInput = document.getElementById('staff-pin-input');
@@ -147,7 +146,13 @@
     );
   });
 
-  exitBtn.addEventListener('click', () => setStaffMode(false));
+  // 戻るボタンは2つ（謎解きパート / ビンゴパート）。戻る先のパートを game.js へ知らせてから、ユーザーモードへ戻る
+  document.querySelectorAll('[data-exit-part]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('staffexitpart', { detail: { part: btn.dataset.exitPart } }));
+      setStaffMode(false);
+    });
+  });
 
   /* ---------------- 暗証番号ダイアログ ---------------- */
   // 長押しが成立した直後は、まだ指が画面に触れている。

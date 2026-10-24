@@ -1969,8 +1969,9 @@ body.staff-mode .staff-only {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
-.staff-banner[hidden] {
-    display: none;
+.staff-banner[hidden],
+.staff-banner [hidden] {
+    display: none !important;
 }
 
 .staff-countdown {
