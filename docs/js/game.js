@@ -466,7 +466,8 @@ class LuckyBoxUI {
             const result = await this.apiCall('end_round', {});
             if (result && result.success && result.game_state) {
                 this.gameState = result.game_state;
-                this.updateDisplays();
+                // チュートリアル終了では、チュートリアルカードが盤面から消えるので、カードも描き直す
+                this.updateDisplay();
                 this.updateUiAfterHistoryOnly();
             } else {
                 alert(`ラウンド終了に失敗しました: ${(result && result.error) || '不明なエラー'}`);

@@ -676,8 +676,12 @@
         this.moon_tokens = 1;
         this.star_tokens = 0;
         this.round_num = 1;
+        // チュートリアルカードは、コンプリート済みかどうかに関係なく、盤面からもコンプリートからも消す（得点にも入らない）。
+        // 操作履歴のスナップショットには残るので、Undo すれば元に戻る
+        this.cards = this.cards.filter((c) => c.card_id !== 'Tutorial');
+        this.completed_cards = this.completed_cards.filter((c) => c.card_id !== 'Tutorial');
         this.updateScore();
-        this.saveState('チュートリアル終了（雷0・月1・星0にリセット）');
+        this.saveState('チュートリアル終了（雷0・月1・星0にリセット、チュートリアルカードを非表示）');
         return true;
       }
       const index = this.round_num - 1;
