@@ -2038,6 +2038,21 @@ class LuckyBoxUI {
             </div>
         ` : '';
 
+        // 認定シール（紙のLBカードの右下にある銀の丸）。チュートリアルとラウンド4のカードには付けない。
+        // Complete ボタンと同じ場所（盤面の右下の空き）に置き、Complete ボタンが出たときは、その下になる。
+        // 文字は「SN / カード名 / 認定」。カード名は、紙に合わせて、数字にはさまれた X を小文字にする（R4X4b → R4x4b）
+        const cardRound = this.getCardRound(card.card_id);
+        const sealCode = String(card.card_id).replace(/(\d)X(\d)/, '$1x$2');
+        const sealSlot = (cardRound && cardRound !== 'tutorial' && cardRound !== 'round4') ? `
+            <div class="seal-slot" aria-hidden="true">
+                <div class="cert-seal">
+                    <span class="cert-sn">SN</span>
+                    <span class="cert-code">${sealCode}</span>
+                    <span class="cert-text">認定</span>
+                </div>
+            </div>
+        ` : '';
+
         // シール編集（ラウンド4の Last）。スタッフモードのときだけ見える
         const stickerEditing = !!(this.stickerEdit && this.stickerEdit.cardId === card.card_id);
         const stickerToolsHtml = (!disableInteractions && cardIndex !== null)
@@ -2053,6 +2068,7 @@ class LuckyBoxUI {
                         ${mainGridHtml}
                         ${rowBonusColumn}
                         ${colBonusStripHtml}
+                        ${sealSlot}
                         ${completeSlot}
                     </div>
                 </div>

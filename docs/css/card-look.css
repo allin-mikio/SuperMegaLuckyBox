@@ -378,6 +378,56 @@
     text-shadow: 2px 2px 0 #FFD54F;
 }
 
+/* 認定シール（紙のLBカードの右下の銀の丸）。Complete ボタンと同じ場所に置く（Complete が出たら、その下になる） */
+.bingo-card .seal-slot {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 2px; /* 列ボーナスの行に合わせる（.complete-slot と同じ） */
+    width: var(--cell);
+    height: var(--cell);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.bingo-card .cert-seal {
+    box-sizing: border-box;
+    width: 94%;
+    height: 94%;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--cell) * 0.01);
+    /* 銀色: 斜めに明暗が走る金属のような地 */
+    background: linear-gradient(135deg, #8E8E8E 0%, #D9D9D9 22%, #F7F7F7 38%, #A9A9A9 55%, #E6E6E6 72%, #8A8A8A 100%);
+    border: 1px solid #7A7A7A;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0 4px rgba(255, 255, 255, 0.6);
+    line-height: 1.05;
+    text-align: center;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.bingo-card .cert-sn,
+.bingo-card .cert-code {
+    font-size: calc(var(--cell) * 0.17);
+    font-weight: 900;
+    color: #FFFFFF;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.75), 1px 1px 1px rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
+}
+
+.bingo-card .cert-text {
+    font-size: calc(var(--cell) * 0.24);
+    font-weight: 700;
+    color: #E60012;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+}
+
 /* 進捗の文字は、ラウンドの色（LBカードの帯と同じ。チュートリアル・R4・全ラウンド終了は紫のまま）。
  * 黄色のかげだと色が見えにくいので、色付きのときは暗いかげにする */
 .progress-step.is-round1,
