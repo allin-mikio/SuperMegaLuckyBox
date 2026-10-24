@@ -8,6 +8,12 @@
  */
 importScripts('js/version.js');
 
+// 【重要】SW_BUILD は、js/version.js の APP_VERSION と同じ番号にする（sync_sw_version.bat で自動で合わせられる）。
+// iPad / iPhone の Safari は、sw.js が importScripts で読み込む version.js の変更を検知できず、
+// sw.js 本体が変わらないと Service Worker の更新を始めない（Android の Chrome は検知できる）。
+// バージョンを上げて公開するときに、この行も変えて、sw.js 本体を変える必要がある。
+const SW_BUILD = '2.01.09';
+
 const CACHE_NAME = `luckybox-${APP_VERSION}`;
 
 const PRECACHE_URLS = [
