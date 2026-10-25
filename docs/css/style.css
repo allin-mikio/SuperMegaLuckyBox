@@ -1249,6 +1249,28 @@ body #lightning-minus2.lightning-effect-btn.active {
     touch-action: manipulation;
 }
 
+/* 認定証のオン/オフ（チェックを外すと、認定証をはがす） */
+.bingo-card .seal-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: 1px solid #4B0082;
+    border-radius: 6px;
+    background: #fff;
+    color: #4B0082;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.bingo-card .seal-toggle input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: #4B0082;
+}
+
 .bingo-card .sticker-btn.active {
     background: #4B0082;
     color: #fff;

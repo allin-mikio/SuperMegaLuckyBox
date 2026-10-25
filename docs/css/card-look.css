@@ -428,6 +428,11 @@
     white-space: nowrap;
 }
 
+/* ラウンド4（Last）: 「認定」だけなので、少し大きくする */
+.bingo-card .cert-seal.is-text-only .cert-text {
+    font-size: calc(var(--cell) * 0.3);
+}
+
 /* 進捗の文字は、ラウンドの色（LBカードの帯と同じ。チュートリアル・R4・全ラウンド終了は紫のまま）。
  * 黄色のかげだと色が見えにくいので、色付きのときは暗いかげにする */
 .progress-step.is-round1,

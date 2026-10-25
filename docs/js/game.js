@@ -19,6 +19,8 @@ class LuckyBoxUI {
         this.lightningReserved = 0;
         // 番号カードに 0 を出すか（ふだんは 1〜9。モード表示を5回タップすると true になり、以降は保存されて 0〜9）
         this.showZero = false;
+        // 認定証を「はがした」カードのID（シール編集のところの「認定証」のチェックを外したカード）。ふだんは、貼ってある（オン）
+        this.sealOff = new Set();
         this.setupEventListeners();
         this.setupStaffHistoryGuard();
         this.stickerEdit = null; // シール編集中の状態 { cardId, tool, message }
@@ -303,13 +305,19 @@ class LuckyBoxUI {
                 this.updateBingoFlow();
             });
         }
-        // 隠しスイッチ: モード表示の文字を、2秒以内の間隔で5回タップすると、番号カードが 0〜9 の表示になる（以降はずっと 0〜9）
+        // 隠しスイッチ: ラウンド3のあいだに、モード表示の文字を、2秒以内の間隔で5回タップすると、番号カードが 0〜9 の表示になる
+        // （以降はずっと 0〜9。オールリセットで 1〜9 に戻る）
         const modeEl = document.getElementById('flow-mode');
         if (modeEl) {
             let taps = 0;
             let lastTap = 0;
             modeEl.addEventListener('click', () => {
                 if (this.showZero) return;
+                // 解放できるのはラウンド3のあいだだけ（解放したあとは、他のラウンドでも 0〜9 のまま）
+                if (!this.gameState || this.gameState.round_num !== 3) {
+                    taps = 0;
+                    return;
+                }
                 const now = Date.now();
                 taps = now - lastTap <= 2000 ? taps + 1 : 1;
                 lastTap = now;
@@ -1486,10 +1494,14 @@ class LuckyBoxUI {
         const config = window.LuckyBoxEngine.STICKER_CONFIG;
         if (!config.cards.includes(card.card_id)) return '';
 
+        // 認定証のオン/オフ（オフで認定証をはがす。初期はオン）。編集中でなくても切り替えられる
+        const sealToggle = `<label class="seal-toggle"><input type="checkbox" ${this.sealOff.has(card.card_id) ? '' : 'checked'} onchange="window.luckyBoxUI.setSeal('${card.card_id}', this.checked)">認定証</label>`;
+
         if (!editing) {
             return `
                 <div class="sticker-tools staff-only">
                     <button type="button" class="sticker-btn" onclick="window.luckyBoxUI.startStickerEdit('${card.card_id}')">シール編集</button>
+                    ${sealToggle}
                 </div>`;
         }
 
@@ -1502,12 +1514,21 @@ class LuckyBoxUI {
         return `
             <div class="sticker-tools staff-only editing">
                 <span class="sticker-title">シール編集中</span>
+                ${sealToggle}
                 <button type="button" class="sticker-btn${tool === 3 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(3)">3x3（あと${left(3)}枚）</button>
                 <button type="button" class="sticker-btn${tool === 2 ? ' active' : ''}" onclick="window.luckyBoxUI.setStickerTool(2)">2x2（あと${left(2)}枚）</button>
                 <button type="button" class="sticker-btn done" onclick="window.luckyBoxUI.endStickerEdit()">完了</button>
                 <div class="sticker-help">貼る位置の左上のマスをタップ。貼ったシール（${window.LuckyBoxEngine.getApi().getTeam()}）をタップすると外れます。</div>
                 ${message}
             </div>`;
+    }
+
+    // 認定証のオン/オフ。画面の状態として保存する（操作履歴＝Undo の対象にはしない）
+    setSeal(cardId, on) {
+        if (on) this.sealOff.delete(cardId);
+        else this.sealOff.add(cardId);
+        this.saveUiState();
+        this.updateDisplay();
     }
 
     startStickerEdit(cardId) {
@@ -1671,6 +1692,7 @@ class LuckyBoxUI {
                 this.bonusSelection = null;
                 // オールリセットで、番号カードは 1〜9 の表示に戻る（0 は、モード表示の5回タップでまた出せる）
                 this.showZero = false;
+                this.sealOff.clear(); // 認定証も、すべてオン（貼ってある）に戻る
                 this.renderCallNumbers();
                 this.gameState = result.game_state;
 
@@ -2195,17 +2217,21 @@ class LuckyBoxUI {
             </div>
         ` : '';
 
-        // 認定シール（紙のLBカードの右下にある銀の丸）。チュートリアルとラウンド4のカードには付けない。
+        // 認定シール（紙のLBカードの右下にある銀の丸）。チュートリアルのカードには付けない。
         // Complete ボタンと同じ場所（盤面の右下の空き）に置き、Complete ボタンが出たときは、その下になる。
         // 文字は「SN / カード名 / 認定」。カード名は、紙に合わせて、数字にはさまれた X を小文字にする（R4X4b → R4x4b）
         const cardRound = this.getCardRound(card.card_id);
         const sealCode = String(card.card_id).replace(/(\d)X(\d)/, '$1x$2');
-        const sealSlot = (cardRound && cardRound !== 'tutorial' && cardRound !== 'round4') ? `
-            <div class="seal-slot" aria-hidden="true">
-                <div class="cert-seal">
-                    <span class="cert-sn">SN</span>
+        // ラウンド4（Last）のカードは、SN とカード名を入れず、銀の丸と「認定」だけ。
+        const sealText = cardRound === 'round4'
+            ? '<span class="cert-text">認定</span>'
+            : `<span class="cert-sn">SN</span>
                     <span class="cert-code">${sealCode}</span>
-                    <span class="cert-text">認定</span>
+                    <span class="cert-text">認定</span>`;
+        const sealSlot = (cardRound && cardRound !== 'tutorial' && !this.sealOff.has(card.card_id)) ? `
+            <div class="seal-slot" aria-hidden="true">
+                <div class="cert-seal${cardRound === 'round4' ? ' is-text-only' : ''}">
+                    ${sealText}
                 </div>
             </div>
         ` : '';
@@ -2442,6 +2468,7 @@ class LuckyBoxUI {
         this.part = saved.part === 'puzzle' ? 'puzzle' : 'bingo';
         this._applyPartDom();
         this.showZero = !!saved.showZero;
+        this.sealOff = new Set(Array.isArray(saved.sealOff) ? saved.sealOff : []);
         this.renderCallNumbers();
 
         // ボーナス欄の使用状態は、エンジン側（Undo と一緒に戻る）に保存しているので、ここでは扱わない
@@ -2452,6 +2479,7 @@ class LuckyBoxUI {
         window.LuckyBoxEngine.uiState.save({
             part: this.part,
             showZero: this.showZero,
+            sealOff: Array.from(this.sealOff),
             currentRound: this.currentRound
         });
     }
