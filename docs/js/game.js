@@ -1824,8 +1824,8 @@ class LuckyBoxUI {
     // マスマーク後の画面更新（全カード再構築を避け、触ったカードだけ差し替える）
     updateAfterMark(cardIndex) {
         this.loadBonusStates();
-        if (this._redrawCompletedAfterMark || !this.replaceActiveCard(cardIndex)) {
-            this._redrawCompletedAfterMark = false;
+        if (this._redrawAfterMark || !this.replaceActiveCard(cardIndex)) {
+            this._redrawAfterMark = false;
             this.updateCardsDisplay();
         }
         // 得点・雷トレイは必要。履歴は次フレーム
@@ -2740,6 +2740,8 @@ class LuckyBoxUI {
         const [cardId, type, index] = bonusKey.split(':');
         const place = `${type === 'row' ? '行' : '列'}${Number(index) + 1}`;
         this.saveBonusStates({ record: true, label: `ボーナス使用済み: ${cardId} ${place}` });
+        // 「？2」で1回使ったあと（表示が「？」）にスキップしたときも、グレーの「？2」の表示に直す
+        if (slots >= 2) this.updateCardsDisplay();
     }
 
     /* ---------------- 数字・？ボーナスの「押せるマス」 ---------------- */
@@ -2840,10 +2842,11 @@ class LuckyBoxUI {
             if (fullyUsed) {
                 el.classList.remove('available');
                 el.classList.add('used');
-            } else if (el.closest('#completed-cards-container')) {
-                // コンプリート欄のカードは、マークのあとの差し替え対象ではないので、残り回数の表示のために全体を描き直す
-                this._redrawCompletedAfterMark = true;
             }
+            // 複数回使えるマス（「？2」など）は、使うたびに表示が変わる（？2 → ？ → グレーの ？2）。
+            // マークのあとに差し替わるのは、タップしたマスのあるカードだけなので、ボーナスが別のカード
+            // （他のLBカード・コンプリート欄）にあるときは、盤面全体を描き直して表示を直す
+            if (slots >= 2) this._redrawAfterMark = true;
         }
         this.applyBonusHighlight();
         return usedKey;
