@@ -792,7 +792,7 @@ class LuckyBoxUI {
         const endBtn = document.getElementById('round-end-btn');
         if (endBtn) {
             endBtn.disabled = finished;
-            endBtn.textContent = finished ? 'ラウンド終了済み' : (tutorial ? 'チュートリアル終了' : `ラウンド${round} 終了`);
+            endBtn.textContent = finished ? 'ラウンド終了済み' : (tutorial ? 'ラウンド0(チュートリアル)終了' : `ラウンド${round} 終了`);
         }
         const starMinus = document.querySelector('[data-hud-adjust="star"][data-amount="-1"]');
         const moonMinus = document.querySelector('[data-hud-adjust="moon"][data-amount="-1"]');
