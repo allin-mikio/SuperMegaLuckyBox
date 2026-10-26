@@ -12,7 +12,7 @@ importScripts('js/version.js');
 // iPad / iPhone の Safari は、sw.js が importScripts で読み込む version.js の変更を検知できず、
 // sw.js 本体が変わらないと Service Worker の更新を始めない（Android の Chrome は検知できる）。
 // バージョンを上げて公開するときに、この行も変えて、sw.js 本体を変える必要がある。
-const SW_BUILD = '2.01.13';
+const SW_BUILD = '2.01.14';
 
 const CACHE_NAME = `luckybox-${APP_VERSION}`;
 
