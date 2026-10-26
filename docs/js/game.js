@@ -225,13 +225,15 @@ class LuckyBoxUI {
     }
 
     // パートの見た目を反映する。保存はしない。
-    //   ・画面のロック（謎解きパートのとき）
+    //   ・画面のロック（謎解きパートのとき、および全ラウンド終了後）
     //   ・スタッフモードの帯の「ユーザーモード(○○パート)に戻る」2つのボタン:
     //     スタッフモードに入る前のパート（this.part。スタッフモード中は変えない）のほうに白い枠を付ける。
     //     無操作で自動で戻るときは、そのパートへ戻る。謎解きパートのボタンは、ラウンド1〜4のときだけ出す
     _applyPartDom() {
         document.body.classList.toggle('puzzle-part', this.part === 'puzzle');
         const round = this.gameState ? (this.gameState.round_num ?? 1) : 0;
+        // 全ラウンド終了後（ラウンド4終了後）も、謎解きパートと同じく、ユーザーモードでは全てのタップを無効にする（CSS: body.round-finished）
+        document.body.classList.toggle('round-finished', round > 4);
         const hasPuzzle = round >= 1 && round <= 4;
         const puzzleBtn = document.getElementById('staff-exit-puzzle-btn');
         const bingoBtn = document.getElementById('staff-exit-btn');

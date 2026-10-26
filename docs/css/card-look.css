@@ -585,8 +585,10 @@
 }
 /* ==== 操作パネルの固定表示（ここまで）==== */
 
-/* 謎解きパートのユーザーモード: バージョン表示（スタッフモードへの入口）以外は、全てタップ無効 */
-body.puzzle-part:not(.staff-mode) .container > *:not(.version-badge) {
+/* 謎解きパートのユーザーモード、および全ラウンド終了後のユーザーモード:
+   バージョン表示（スタッフモードへの入口）以外は、全てタップ無効 */
+body.puzzle-part:not(.staff-mode) .container > *:not(.version-badge),
+body.round-finished:not(.staff-mode) .container > *:not(.version-badge) {
     pointer-events: none;
 }
 
