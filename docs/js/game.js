@@ -261,11 +261,18 @@ class LuckyBoxUI {
         return this.hasOpenCellFor(el.dataset.bonusValues.split(','));
     }
 
-    // 番号カードを並べる。ふだんは 1〜9、隠しスイッチ（this.showZero）のあとは 0〜9
+    // 0 の番号カードを出すか: 隠しスイッチ（this.showZero）で解放済みで、かつラウンド3のあいだだけ。
+    // ラウンド3が終わると 1〜9 に戻り、以降は解放できない（解放の操作もラウンド3だけ）
+    isZeroVisible() {
+        return !!this.showZero && !!this.gameState && this.gameState.round_num === 3;
+    }
+
+    // 番号カードを並べる。ふだんは 1〜9、ラウンド3で解放したあとは 0〜9
     renderCallNumbers() {
         const numbers = document.getElementById('call-numbers');
         if (!numbers) return;
-        const start = this.showZero ? 0 : 1;
+        this._callZero = this.isZeroVisible();
+        const start = this._callZero ? 0 : 1;
         numbers.innerHTML = Array.from({ length: 10 - start }, (_, i) => start + i).map((n) =>
             `<button type="button" class="call-num" data-num="${n}" aria-label="読み上げ番号 ${n}">${n}</button>`
         ).join('');
@@ -306,7 +313,7 @@ class LuckyBoxUI {
             });
         }
         // 隠しスイッチ: ラウンド3のあいだに、モード表示の文字を、2秒以内の間隔で5回タップすると、番号カードが 0〜9 の表示になる
-        // （以降はずっと 0〜9。オールリセットで 1〜9 に戻る）
+        // （0〜9 の表示もラウンド3のあいだだけ。ラウンド3が終わると 1〜9 に戻り、以降は解放できない。オールリセットでも 1〜9 に戻る）
         const modeEl = document.getElementById('flow-mode');
         if (modeEl) {
             let taps = 0;
@@ -355,6 +362,14 @@ class LuckyBoxUI {
     updateBingoFlow() {
         const panel = document.getElementById('call-panel');
         if (!panel) return;
+        // ラウンドが変わって 0 を出すかどうかが変わったときは、番号カードを並べ直す（ラウンド3が終わると 1〜9 に戻る）
+        if (this._callZero !== this.isZeroVisible()) {
+            if (!this.isZeroVisible() && this.calledNumber === '0') {
+                this.calledNumber = null;
+                this.lightningReserved = 0;
+            }
+            this.renderCallNumbers();
+        }
         const enforced = this.flowEnforced();
         panel.hidden = !enforced;
         if (!enforced) {

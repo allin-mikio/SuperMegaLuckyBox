@@ -108,7 +108,8 @@ function ensureLayout_(sheet, startRow) {
   var teamRange = '$A$' + startRow + ':$A$' + endRow;
   var moonCountRange = '$F$' + startRow + ':$F$' + endRow;
   var totalRange = '$I$' + startRow + ':$I$' + endRow;
-  var moonTable = MOON_SHEET + '!$A$2:$C$9';
+  // 月数順位ごとの点数表。チーム数ぶん（TEAM_COUNT 行）まで参照する。順位の行が表に無いときは 0 点
+  var moonTable = MOON_SHEET + '!$A$2:$C$' + (TEAM_COUNT + 1);
 
   for (var r = startRow; r <= endRow; r++) {
     // D 総合点(月除く) = 盤面 + トークン
