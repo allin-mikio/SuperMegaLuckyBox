@@ -183,6 +183,8 @@
 
             <!-- ビンゴカード表示セクション -->
             <section class="bingo-cards">
+                <!-- 見出し（LB Cards + 雷）と、ビンゴパートの操作パネルは、ひとまとめにして、ユーザーモードのビンゴパートでは画面の上端に追従させる -->
+                <div id="bingo-sticky" class="bingo-sticky">
                 <div class="section-header">
                     <h2>🗂️ LB Cards</h2>
                     <!-- 雷の個数と「−／＋」（星・月と同じ作り。−／＋はスタッフモードのみ） -->
@@ -210,6 +212,7 @@
                     </div>
                     <div id="call-numbers" class="call-numbers" role="group" aria-label="読み上げ番号"></div>
                 </div>
+                </div><!-- /#bingo-sticky -->
                 <div id="cards-container">
                     <p class="no-cards">カードが追加されていません</p>
                 </div>

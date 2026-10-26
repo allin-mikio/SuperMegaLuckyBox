@@ -551,17 +551,25 @@
 }
 
 /* ==== 操作パネルの固定表示（A案）====
- * カードが増えて画面からはみ出しても、番号の決定パネルを画面の上端に残す（LB Cards の区画の中だけで固定）。
+ * カードが増えて画面からはみ出しても、見出し（LB Cards + 雷）と番号の決定パネルを、ひとまとめにして画面の上端に残す
+ * （LB Cards の区画の中だけで固定。ユーザーモードのビンゴパートだけ。game.js が .is-sticky を付け外しする）。
  * 場所をとらないよう、少し小さくしている。元に戻すときは、この区画（ここから「ここまで」）を丸ごと消す。 */
-.call-panel {
+.bingo-sticky.is-sticky {
     position: sticky;
     top: 0;
     z-index: 60;
     margin: 0 -6px 12px;
-    padding: 8px 8px 6px;
+    padding: 6px 8px 6px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.97);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.bingo-sticky.is-sticky .section-header {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+}
+.bingo-sticky .call-panel {
+    margin: 0;
 }
 .call-panel .flow-bar {
     min-height: 42px;

@@ -385,6 +385,9 @@ class LuckyBoxUI {
         }
         const enforced = this.flowEnforced();
         panel.hidden = !enforced;
+        // 見出し（LB Cards + 雷）と操作パネルは、ビンゴパートの流れの中だけ、画面の上端に追従させる
+        const sticky = document.getElementById('bingo-sticky');
+        if (sticky) sticky.classList.toggle('is-sticky', enforced);
         if (!enforced) {
             this.lightningReserved = 0;
             this.renderLightningTray();
