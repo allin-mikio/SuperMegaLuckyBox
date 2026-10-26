@@ -34,6 +34,12 @@
         </div>
     </div>
 
+    <!-- スタッフモード中の作業メッセージ（画面の下に出しっぱなし。後ろの画面は、ふつうに操作できる。「閉じる」で消せる） -->
+    <div id="staff-notice" class="staff-notice" role="status" hidden>
+        <div id="staff-notice-text" class="staff-notice-text"></div>
+        <button id="staff-notice-close" class="staff-notice-close" type="button">閉じる</button>
+    </div>
+
     <!-- スタッフモードへ入るための暗証番号入力 -->
     <div id="staff-pin-overlay" class="staff-pin-overlay" hidden>
         <form id="staff-pin-form" class="staff-pin-dialog" autocomplete="off">

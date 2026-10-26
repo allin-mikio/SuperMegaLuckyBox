@@ -207,9 +207,12 @@
     if (pinInput.value === STAFF_PIN) {
       closePinDialog();
       // タイトル画面からの場合は、ここでタイトル画面を終える
+      const fromTitle = !titleScreen.hidden;
       writeTitleFlag('done');
       setTitleVisible(false);
       setStaffMode(true);
+      // 入った直後に、game.js が yes / no を聞く（タイトル画面から来たかどうかも知らせる）
+      document.dispatchEvent(new CustomEvent('staffentered', { detail: { fromTitle } }));
     } else {
       pinError.hidden = false;
       pinInput.value = '';

@@ -1996,6 +1996,51 @@ body.staff-mode .staff-only {
     display: none !important;
 }
 
+/* スタッフモード中の作業メッセージ。画面の下に浮かせて出しっぱなしにする（メッセージを見ながら操作できる） */
+.staff-notice {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 950;
+    width: min(94vw, 640px);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #FFF3E0;
+    border: 3px solid #E65100;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    color: #4B2A00;
+    font-weight: bold;
+}
+
+.staff-notice[hidden] {
+    display: none;
+}
+
+.staff-notice-text {
+    flex: 1;
+    white-space: pre-line;
+    line-height: 1.4;
+}
+
+.staff-notice-close {
+    flex: none;
+    padding: 8px 14px;
+    border: 2px solid #E65100;
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #E65100;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 900;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
 /* 戻るボタン2つ: 「無操作で…」の下の2行目に、左右で並べる。色はユーザーモードのパート表示と同じ */
 .staff-exit-row {
     flex: 1 1 100%;

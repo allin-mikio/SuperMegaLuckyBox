@@ -43,6 +43,17 @@ class LuckyBoxUI {
                 if (this.gameState) this.updateDisplay();
             }
         });
+        // 暗証番号でスタッフモードに入った直後の yes / no。画面（スタッフモードの帯）が出てから聞く
+        document.addEventListener('staffentered', (event) => {
+            const fromTitle = !!(event.detail && event.detail.fromTitle);
+            setTimeout(() => this.onStaffEntered(fromTitle), 200);
+        });
+        // 作業メッセージ: 「閉じる」で消す。スタッフモードを出たときも消す
+        const noticeClose = document.getElementById('staff-notice-close');
+        if (noticeClose) noticeClose.addEventListener('click', () => this.hideStaffNotice());
+        document.addEventListener('staffmodechange', (event) => {
+            if (!event.detail.on) this.hideStaffNotice();
+        });
         // 「ユーザーモード(○○パート)に戻る」で選んだパートへ戻る（staff.js が、ユーザーモードへ戻る直前に知らせる）
         document.addEventListener('staffexitpart', (event) => {
             this._setPart(event.detail.part);
@@ -862,15 +873,17 @@ class LuckyBoxUI {
     }
 
     // 「ラウンド終了」: いまのラウンドの星の数を記録して、星を 0 に戻し、次のラウンドへ進める（Undo で戻せる）
-    async endRound() {
-        if (!this.gameState) return;
+    // options.skipConfirm: 呼び出し側ですでに確認したとき（スタッフモードに入ったときの yes/no）は、確認を省く。
+    // ラウンドを終えられたら true
+    async endRound(options = {}) {
+        if (!this.gameState) return false;
         const round = this.gameState.round_num ?? 1;
-        if (round > 4) return;
+        if (round > 4) return false;
         const star = this.gameState.star_tokens || 0;
         const message = round === 0
             ? 'チュートリアルを終了しますか？\n雷 0・月 1・星 0 にして、ラウンド1を始めます。'
             : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します。`;
-        if (this._endingRound || !confirm(message)) return;
+        if (this._endingRound || (!options.skipConfirm && !confirm(message))) return false;
 
         this._endingRound = true;
         // 前回の送信結果の表示は、ここで消す
@@ -889,7 +902,7 @@ class LuckyBoxUI {
                 this.updateUiAfterHistoryOnly();
             } else {
                 alert(`ラウンド終了に失敗しました: ${(result && result.error) || '不明なエラー'}`);
-                return;
+                return false;
             }
 
             // ラウンド1〜4の終了後は、更新された Scores をそのままスプシへ送信する（チュートリアル終了では送らない）
@@ -915,9 +928,91 @@ class LuckyBoxUI {
                     alert(`ラウンド${round}は終了しましたが、スプシへの送信に失敗しました。\n${statusEl.textContent}\n（Scores の「結果送信」で再送信できます）`);
                 }
             }
+            return true;
         } finally {
             this._endingRound = false;
         }
+    }
+
+    // スタッフモード中の作業メッセージ。出しっぱなしで、後ろの画面はふつうに操作できる。「閉じる」か、スタッフモードを出ると消える
+    // kind: メッセージの種類（あとで追記するときの目印。例: 'round4-end'）
+    showStaffNotice(text, kind = '') {
+        const box = document.getElementById('staff-notice');
+        const textEl = document.getElementById('staff-notice-text');
+        if (!box || !textEl) return;
+        textEl.textContent = text;
+        this._staffNoticeKind = kind;
+        box.hidden = false;
+    }
+
+    hideStaffNotice() {
+        const box = document.getElementById('staff-notice');
+        if (box) box.hidden = true;
+        this._staffNoticeKind = '';
+    }
+
+    // スタッフモードに入った直後の yes / no（チュートリアルの遷移を、スタッフの操作 1 回で進める）。
+    //   ・タイトル画面から入ったとき: 「ビンゴパート(チュートリアル)に進みますか？」 yes → ユーザーモード(ビンゴパート)へ
+    //   ・チュートリアル中（ラウンド0）にユーザーモードから入ったとき:
+    //       「チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？」
+    //       yes → ラウンド0終了 → ユーザーモード(謎解きパート)へ
+    //   no ならスタッフモードのまま（ふつうに操作できる）
+    //
+    // ラウンド1〜3（共通）:
+    //   ・謎解きパートからスタッフモードに入ったとき（ラウンド1〜4）: 「ラウンドXビンゴパート準備」の手順を、画面の下に出しっぱなしで表示する
+    //     （showStaffNotice。操作しながら見られる。ラウンド4は「LB Last シール処理」の手順が入る）
+    //   ・ビンゴパートからスタッフモードに入ったとき: 「ラウンドX 終了処理を行い、ラウンドX+1 謎解きパートへ進みますか？」
+    //       yes → ラウンドX終了（星を記録・Scores をスプシへ送信）→ ユーザーモード(謎解きパート)へ
+    //   ・ラウンド4のビンゴパートから入ったとき: 「ラウンド4終了処理」の手順を、出しっぱなしで表示する。
+    //     「結果送信」が済んだら、「お疲れさまでした」を追記する
+    async onStaffEntered(fromTitle) {
+        if (!this.gameState || !window.StaffMode || !this.isStaffNow()) return;
+        const round = this.gameState.round_num ?? 1;
+
+        // 謎解きパートから入ったとき（ラウンド1〜4）: ビンゴパートの準備の手順を出しっぱなしで表示する。ラウンド4だけ「Last シール処理」が入る
+        if (round >= 1 && round <= 4 && !fromTitle && this.part === 'puzzle') {
+            const steps = round === 4
+                ? ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'LB Last シール処理 !!!', 'ユーザーモード(ビンゴパート)に戻る']
+                : ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'ユーザーモード(ビンゴパート)に戻る'];
+            this.showStaffNotice([`※ ラウンド${round}ビンゴパート準備`].concat(steps.map((step, i) => `${i + 1}.${step}`)).join('\n'));
+            return;
+        }
+
+        // ラウンド4のビンゴパートから入ったとき: ラウンド4終了処理の手順を出しっぱなしで表示する。
+        // 最後の「結果送信」が済んだら、「お疲れさまでした」を追記する（onScoreSubmittedByButton）
+        if (round === 4 && !fromTitle && this.part !== 'puzzle') {
+            this.showStaffNotice('※ ラウンド4終了処理\n1.ラウンド4終了ボタンを押す\n2.星、雷、月の Exにチェック\n3.ラウンド4結果送信', 'round4-end');
+            return;
+        }
+
+        // ビンゴパートから入ったとき（ラウンド1〜3）: ラウンド終了の確認
+        if (round >= 1 && round <= 3 && !fromTitle) {
+            const star = this.gameState.star_tokens || 0;
+            if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？\n（星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します）`)) return;
+            const ended = await this.endRound({ skipConfirm: true });
+            if (!ended || !this.isStaffNow()) return;
+            this._setPart('puzzle');
+            this.renderTokenHud();
+            window.StaffMode.exit();
+            return;
+        }
+
+        if (round !== 0) return;
+
+        if (fromTitle) {
+            if (!confirm('ビンゴパート(チュートリアル)に進みますか？')) return;
+            this._setPart('bingo');
+            this.renderTokenHud();
+            window.StaffMode.exit();
+            return;
+        }
+
+        if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？\n（雷 0・月 1・星 0 にして、チュートリアルカードを非表示にします）')) return;
+        const ended = await this.endRound({ skipConfirm: true });
+        if (!ended || !this.isStaffNow()) return;
+        this._setPart('puzzle');
+        this.renderTokenHud();
+        window.StaffMode.exit();
     }
 
     // トークンボタンの設定
@@ -1322,7 +1417,24 @@ class LuckyBoxUI {
         const btn = document.getElementById('score-submit-btn');
         if (!btn || btn.dataset.bound === '1') return;
         btn.dataset.bound = '1';
-        btn.addEventListener('click', () => this.submitScoreToSheet());
+        btn.addEventListener('click', async () => {
+            const sent = await this.submitScoreToSheet();
+            if (sent) this.onScoreSubmittedByButton();
+        });
+    }
+
+    // 「結果送信」ボタンで送信できたとき（ラウンド終了時の自動送信は含まない）。
+    // 全ラウンド終了後（ラウンド4終了処理の最後の送信）なら、作業メッセージに「お疲れさまでした」を追記する
+    onScoreSubmittedByButton() {
+        if (!this.isStaffNow() || !this.gameState || (this.gameState.round_num ?? 1) <= 4) return;
+        const done = 'お疲れさまでした';
+        const box = document.getElementById('staff-notice');
+        const textEl = document.getElementById('staff-notice-text');
+        if (box && textEl && !box.hidden && this._staffNoticeKind === 'round4-end') {
+            if (!textEl.textContent.endsWith(done)) textEl.textContent = `${textEl.textContent}\n${done}`;
+        } else {
+            this.showStaffNotice(done, 'done'); // 作業メッセージを閉じていたときは、この一言だけ出す
+        }
     }
 
     setScoreSubmitStatus(message, isError) {
@@ -1417,6 +1529,7 @@ class LuckyBoxUI {
             }
             const row = parsed.row ? `（行 ${parsed.row}）` : '';
             this.setScoreSubmitStatus(`送信完了: チーム ${payload.team}${row}`, false);
+            return true;
         } catch (error) {
             console.error('score sync error:', error);
             const tip = /Failed to fetch/i.test(String(error && error.message))
