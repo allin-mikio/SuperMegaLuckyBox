@@ -891,6 +891,10 @@ class LuckyBoxUI {
         if (this._endingRound || (!options.skipConfirm && !confirm(message))) return false;
 
         this._endingRound = true;
+        // 処理が終わるまで（通信を含む）、画面全体をふさいで、誤タップを防ぐ
+        this.showBusy(round >= 1
+            ? `ラウンド${round}終了処理中…\nScores をスプシに送信しています。\nそのままお待ちください`
+            : 'ラウンド0(チュートリアル)終了処理中…\nそのままお待ちください');
         // 前回の送信結果の表示は、ここで消す
         clearTimeout(this._roundEndStatusTimer);
         const prevStatus = document.getElementById('round-end-status');
@@ -936,7 +940,23 @@ class LuckyBoxUI {
             return true;
         } finally {
             this._endingRound = false;
+            this.hideBusy();
         }
+    }
+
+    // 処理中メッセージ（画面全体をふさぐ）。表示中は、後ろの画面は何もタップできない。
+    // 通信を含む処理の間だけ使う（showBusy → 処理 → hideBusy）
+    showBusy(text) {
+        const overlay = document.getElementById('busy-overlay');
+        const textEl = document.getElementById('busy-text');
+        if (!overlay || !textEl) return;
+        textEl.textContent = text;
+        overlay.hidden = false;
+    }
+
+    hideBusy() {
+        const overlay = document.getElementById('busy-overlay');
+        if (overlay) overlay.hidden = true;
     }
 
     // スタッフモード中の作業メッセージ。出しっぱなしで、後ろの画面はふつうに操作できる。「閉じる」か、スタッフモードを出ると消える
@@ -1349,7 +1369,11 @@ class LuckyBoxUI {
     // 選択欄を、エンジンの現在のチームに合わせる（Undo・リセット・再読み込みのあとも正しく表示するため）
     syncTeamSelect() {
         const select = document.getElementById('team-select');
-        if (select) select.value = window.LuckyBoxEngine.getApi().getTeam();
+        const team = window.LuckyBoxEngine.getApi().getTeam();
+        if (select) select.value = team;
+        // タイトル画面のバージョン表示の下にも、チーム名を出す（例: Team B）
+        const titleTeam = document.getElementById('title-team');
+        if (titleTeam) titleTeam.textContent = team ? `Team ${team}` : '';
     }
 
     /* ---------------- 得点欄のスタッフ入力（星・雷・月） ---------------- */
@@ -1423,7 +1447,15 @@ class LuckyBoxUI {
         if (!btn || btn.dataset.bound === '1') return;
         btn.dataset.bound = '1';
         btn.addEventListener('click', async () => {
-            const sent = await this.submitScoreToSheet();
+            // 通信が終わるまで、画面全体をふさいで、誤タップを防ぐ（ラウンド終了のときと同じ処理中メッセージ）
+            if (this._endingRound) return;
+            this.showBusy('結果送信中…\nScores をスプシに送信しています。\nそのままお待ちください');
+            let sent = false;
+            try {
+                sent = await this.submitScoreToSheet();
+            } finally {
+                this.hideBusy();
+            }
             if (sent) this.onScoreSubmittedByButton();
         });
     }
@@ -1546,9 +1578,23 @@ class LuckyBoxUI {
         }
     }
 
+    // 通信が固まったとき、処理中メッセージ（画面全体をふさぐ）が出たままにならないよう、時間で打ち切る
+    async fetchWithTimeout(url, options, ms = 12000) {
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
+        try {
+            return await fetch(url, controller ? { ...options, signal: controller.signal } : options);
+        } catch (error) {
+            if (controller && controller.signal.aborted) throw new Error('通信がタイムアウトしました');
+            throw error;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+
     async postScoreSync(url, payload) {
         // Apps Script は application/json だとプリフライトで落ちやすい → text/plain
-        const res = await fetch(url, {
+        const res = await this.fetchWithTimeout(url, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload),
@@ -1560,7 +1606,7 @@ class LuckyBoxUI {
     async getScoreSync(url, payload) {
         const endpoint = new URL(url);
         endpoint.searchParams.set('payload', JSON.stringify(payload));
-        const res = await fetch(endpoint.toString(), {
+        const res = await this.fetchWithTimeout(endpoint.toString(), {
             method: 'GET',
             redirect: 'follow',
         });

@@ -1996,6 +1996,58 @@ body.staff-mode .staff-only {
     display: none !important;
 }
 
+/* 処理中メッセージ: 画面全体をふさぐ（表示中は後ろの画面を何もタップできない）。暗証番号ダイアログ（1100）より上 */
+.busy-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.busy-overlay[hidden] {
+    display: none;
+}
+
+.busy-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 88vw;
+    padding: 24px 30px;
+    border-radius: 14px;
+    background: #FFFFFF;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    color: #4B0082;
+    font-weight: bold;
+    text-align: center;
+}
+
+.busy-text {
+    white-space: pre-line;
+    line-height: 1.5;
+    font-size: 1.1rem;
+}
+
+.busy-spinner {
+    width: 40px;
+    height: 40px;
+    border: 5px solid #D9C7F0;
+    border-top-color: #7030A0;
+    border-radius: 50%;
+    animation: busy-spin 0.9s linear infinite;
+}
+
+@keyframes busy-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* スタッフモード中の作業メッセージ。画面の下に浮かせて出しっぱなしにする（メッセージを見ながら操作できる） */
 .staff-notice {
     position: fixed;
@@ -2096,6 +2148,16 @@ body.staff-mode .staff-only {
 .title-screen .version-badge {
     color: #FFFFFF;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    /* バージョンの下に、チーム名を出す */
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+/* タイトル画面のチーム名（目立たなくてよい） */
+.title-screen .title-team {
+    font-size: 0.8rem;
+    opacity: 0.8;
 }
 
 body.title-active {
