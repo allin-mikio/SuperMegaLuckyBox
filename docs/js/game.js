@@ -888,7 +888,13 @@ class LuckyBoxUI {
         const message = round === 0
             ? 'チュートリアルを終了しますか？\n雷 0・月 1・星 0 にして、ラウンド1を始めます。'
             : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します。`;
-        if (this._endingRound || (!options.skipConfirm && !confirm(message))) return false;
+        if (this._endingRound) return false;
+        if (!options.skipConfirm) {
+            // 謎解きパートからボタンで終了するのは、ふつうの流れではない（ビンゴパートからスタッフモードに入って終えるのが通常）。
+            // 押し間違いを防ぐため、1段階目で意図的かどうかを確かめる
+            if (this.part === 'puzzle' && !confirm(`謎解きパートからのラウンド${round}終了を行いますが、意図的ですか？`)) return false;
+            if (!confirm(message)) return false;
+        }
 
         this._endingRound = true;
         // 処理が終わるまで（通信を含む）、画面全体をふさいで、誤タップを防ぐ
