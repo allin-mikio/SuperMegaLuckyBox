@@ -1688,6 +1688,13 @@ select.score-sheet-input {
     font-size: 1rem;
 }
 
+/* スタッフが直した個数（実際のトークンの数とは別の値。「ラウンド終了」で実際の数に同期される） */
+select.score-sheet-input.is-manual {
+    border-color: #E65100;
+    background: #FFF3E0;
+    color: #E65100;
+}
+
 @media (max-width: 700px) {
     .score-board-block,
     .score-token-block {

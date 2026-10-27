@@ -53,6 +53,11 @@
     moon: 0,
     lightning_ex: false,
     moon_ex: false, // 得点は別集計
+    // 得点欄の個数（星はラウンド別・雷・月）をスタッフが直接直した値。null = 直していない（実際に数えている個数をそのまま使う）。
+    // 実際に管理しているトークンの数（星・雷・月）には影響しない。「ラウンド終了」で、そのラウンド分の星と雷・月が、実際の数に同期される（null に戻る）
+    stars_manual: [null, null, null, null],
+    lightning_manual: null,
+    moon_manual: null,
   });
 
   const clampScoreCount = (n) => {
@@ -66,6 +71,20 @@
     const out = [];
     for (let i = 0; i < STAR_ROUND_COUNT; i++) out.push(clampScoreCount(src[i]));
     if (!Array.isArray(value) && legacyStar != null) out[0] = clampScoreCount(legacyStar);
+    return out;
+  };
+
+  // 直した個数: 整数なら 0〜99 に丸める。直していなければ null
+  const normalizeManualCount = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isInteger(n) ? clampScoreCount(n) : null;
+  };
+
+  const normalizeStarsManual = (value) => {
+    const src = Array.isArray(value) ? value : [];
+    const out = [];
+    for (let i = 0; i < STAR_ROUND_COUNT; i++) out.push(normalizeManualCount(src[i]));
     return out;
   };
 
@@ -108,6 +127,9 @@
       moon: clampScoreCount(src.moon != null ? src.moon : moonFromArray != null ? moonFromArray : 0),
       lightning_ex: !!lightningExFromArray,
       moon_ex: !!moonExFromArray,
+      stars_manual: normalizeStarsManual(src.stars_manual),
+      lightning_manual: normalizeManualCount(src.lightning_manual),
+      moon_manual: normalizeManualCount(src.moon_manual),
     };
   };
 
@@ -680,6 +702,7 @@
         // 操作履歴のスナップショットには残るので、Undo すれば元に戻る
         this.cards = this.cards.filter((c) => c.card_id !== 'Tutorial');
         this.completed_cards = this.completed_cards.filter((c) => c.card_id !== 'Tutorial');
+        this.syncManualCounts(-1);
         this.updateScore();
         this.saveState('チュートリアル終了（雷0・月1・星0にリセット、チュートリアルカードを非表示）');
         return true;
@@ -689,9 +712,21 @@
       this.round_stars[index] = count;
       this.star_tokens = 0;
       this.round_num += 1;
+      this.syncManualCounts(index);
       this.updateScore();
       this.saveState(`ラウンド${index + 1}終了（星 ${count}個を記録）`);
       return true;
+    }
+
+    // 得点欄でスタッフが直した個数を、実際に管理している数に同期する（「ラウンド終了」のとき）。
+    // 終えるラウンドの星（starIndex。チュートリアル終了は -1 で星なし）と、雷・月の「直した値」を消す。
+    // 他のラウンドの星の「直した値」は、そのまま残す
+    syncManualCounts(starIndex) {
+      const inputs = cleanScoreInputs(this.score_inputs);
+      if (starIndex >= 0 && starIndex < inputs.stars_manual.length) inputs.stars_manual[starIndex] = null;
+      inputs.lightning_manual = null;
+      inputs.moon_manual = null;
+      this.score_inputs = inputs;
     }
 
     /* ---- スコア ---- */
@@ -746,15 +781,19 @@
       //   星: 終えたラウンドは round_stars、いまのラウンドは star_tokens
       //   月・雷: 最終的な個数（moon_tokens / lightning_tokens）
       const inputs = cleanScoreInputs(this.score_inputs);
-      const starCounts = this.round_stars.map((recorded, i) =>
-        clampScoreCount(i === this.round_num - 1 ? this.star_tokens : recorded)
-      );
-      const moonCount = clampScoreCount(this.moon_tokens);
-      const lightningCount = clampScoreCount(this.lightning_tokens);
+      // スタッフが得点欄で直した個数（*_manual）があれば、それを使う（実際のトークンの数は変えない）。
+      // 「ラウンド終了」で、実際の数に同期される（直した値が消える）
+      const starCounts = this.round_stars.map((recorded, i) => {
+        const manual = inputs.stars_manual[i];
+        if (manual !== null) return manual;
+        return clampScoreCount(i === this.round_num - 1 ? this.star_tokens : recorded);
+      });
+      const moonCount = inputs.moon_manual !== null ? inputs.moon_manual : clampScoreCount(this.moon_tokens);
+      const lightningCount = inputs.lightning_manual !== null ? inputs.lightning_manual : clampScoreCount(this.lightning_tokens);
       const starRounds = starCounts.map((count, i) => {
         // 星の Ex は、仕様上 R4 でしか取れない（R1〜R3 は常に Ex なし）
         const ex = i === STAR_ROUND_COUNT - 1 ? inputs.star_ex[i] : false;
-        return { count, ex, points: starPoints(count, ex) };
+        return { count, ex, manual: inputs.stars_manual[i] !== null, points: starPoints(count, ex) };
       });
       const starPts = starRounds.reduce((sum, r) => sum + r.points, 0);
       const starCount = starCounts.reduce((sum, n) => sum + n, 0);
@@ -774,8 +813,8 @@
         active_points: activePoints,
         board_points: boardPoints,
         star: { count: starCount, points: starPts, rounds: starRounds },
-        lightning: { count: lightningCount, ex: inputs.lightning_ex, points: lightningPts },
-        moon: { count: moonCount, ex: inputs.moon_ex },
+        lightning: { count: lightningCount, ex: inputs.lightning_ex, manual: inputs.lightning_manual !== null, points: lightningPts },
+        moon: { count: moonCount, ex: inputs.moon_ex, manual: inputs.moon_manual !== null },
         bonus_points: bonusPoints,
         total,
       };
@@ -787,6 +826,10 @@
       const merged = Object.assign({}, prev, data || {});
       if (!data || data.stars == null) merged.stars = prev.stars;
       if (!data || data.star_ex == null) merged.star_ex = prev.star_ex;
+      // 直した個数は、渡されたものだけ更新する（null を渡すと「直していない」に戻る）
+      if (!data || data.stars_manual == null) merged.stars_manual = prev.stars_manual;
+      if (!data || data.lightning_manual === undefined) merged.lightning_manual = prev.lightning_manual;
+      if (!data || data.moon_manual === undefined) merged.moon_manual = prev.moon_manual;
       if (data && data.star != null && data.stars == null) merged.star = data.star;
       this.score_inputs = cleanScoreInputs(merged);
       this.updateScore();

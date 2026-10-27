@@ -1415,13 +1415,16 @@ class LuckyBoxUI {
             if (label) label.classList.add('is-disabled');
         });
 
-        // 個数（星・雷・月）は、獲得したぶんを自動で数えて表示する（スタッフが直すときは、画面上の「−／＋」で増減する）。
-        // ここでスタッフが入力するのは Ex の有無だけ
+        // 個数（星・雷・月）は、獲得したぶんを自動で数えて表示する。
+        // スタッフが、ここで個数を直すこともできる（ミスの修正用）。直した値は、得点とスプシへの送信にだけ使われ、
+        // 実際に管理しているトークンの数（画面上の「−／＋」で増減する数）は変わらない。
+        // 逆に、「ラウンド終了」を押すと、そのラウンドの星と、雷・月は、実際の数に同期される（直した値は消える）。
+        // 直した個数は、色を変えて表示する（.is-manual）
         countIds.forEach((id) => {
             const select = document.getElementById(id);
             if (select) {
-                select.disabled = true;
-                select.title = '自動で数えています（星・月の「−／＋」、雷の「＋」で増減）';
+                select.disabled = false;
+                select.title = '個数を直せます（実際のトークンの数は変わりません。「ラウンド終了」で、実際の数に同期されます）';
             }
         });
 
@@ -1435,10 +1438,32 @@ class LuckyBoxUI {
             this.updateDisplay();
         };
 
-        countIds.concat(exIds).forEach((id) => {
+        exIds.forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', save);
         });
+
+        // 個数を直したとき: 直した欄だけを「直した値」として渡す（ほかの欄の「直した値」は、そのまま）
+        const saveCount = async (data) => {
+            const result = await this.apiCall('set_score_inputs', data);
+            if (result && result.game_state) this.gameState = result.game_state;
+            this.updateDisplay();
+        };
+        [1, 2, 3, 4].forEach((r) => {
+            const el = document.getElementById(`score-star-r${r}`);
+            if (!el) return;
+            el.addEventListener('change', () => {
+                const details = (this.gameState && this.gameState.score_details) || {};
+                const rounds = (details.star && details.star.rounds) || [];
+                const stars = [0, 1, 2, 3].map((i) => (rounds[i] && rounds[i].manual ? rounds[i].count : null));
+                stars[r - 1] = Number(el.value);
+                saveCount({ stars_manual: stars });
+            });
+        });
+        const lightningEl = document.getElementById('score-lightning-count');
+        if (lightningEl) lightningEl.addEventListener('change', () => saveCount({ lightning_manual: Number(lightningEl.value) }));
+        const moonEl = document.getElementById('score-moon-count');
+        if (moonEl) moonEl.addEventListener('change', () => saveCount({ moon_manual: Number(moonEl.value) }));
     }
 
     /* ---------------- Scores → スプシ送信 ---------------- */
@@ -1636,6 +1661,11 @@ class LuckyBoxUI {
             const el = document.getElementById(id);
             if (el) el.checked = !!on;
         };
+        // スタッフが直した個数は、色を変えて表示する
+        const setManual = (id, on) => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('is-manual', !!on);
+        };
         const setText = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.textContent = value;
@@ -1643,11 +1673,14 @@ class LuckyBoxUI {
         for (let i = 0; i < 4; i++) {
             const round = rounds[i] || {};
             setVal(`score-star-r${i + 1}`, round.count || 0);
+            setManual(`score-star-r${i + 1}`, round.manual);
             setCheck(`score-star-r${i + 1}-ex`, round.ex);
             setText(`score-star-r${i + 1}-pts`, `${round.points || 0}点`);
         }
         setVal('score-lightning-count', lightning.count || 0);
         setVal('score-moon-count', moon.count || 0);
+        setManual('score-lightning-count', lightning.manual);
+        setManual('score-moon-count', moon.manual);
         setCheck('score-lightning-ex', lightning.ex);
         setCheck('score-moon-ex', moon.ex);
     }
