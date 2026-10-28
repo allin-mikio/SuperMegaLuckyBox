@@ -29,8 +29,8 @@
              無操作で自動で戻るときの戻り先（スタッフモードに入る前のパート）のボタンには、白い枠が付く（is-auto）。
              謎解きパートのボタンは、ラウンド1〜4のときだけ出る -->
         <div class="staff-exit-row">
-            <button id="staff-exit-puzzle-btn" class="staff-exit-btn is-puzzle" type="button" data-exit-part="puzzle">ユーザーモード(謎解きパート)に戻る</button>
-            <button id="staff-exit-btn" class="staff-exit-btn is-bingo" type="button" data-exit-part="bingo">ユーザーモード(ビンゴパート)に戻る</button>
+            <button id="staff-exit-puzzle-btn" class="staff-exit-btn is-puzzle" type="button" data-exit-part="puzzle">ユーザーモード(謎解きパート)へ</button>
+            <button id="staff-exit-btn" class="staff-exit-btn is-bingo" type="button" data-exit-part="bingo">ユーザーモード(ビンゴパート)へ</button>
         </div>
     </div>
 
@@ -45,6 +45,49 @@
         <div class="busy-box">
             <div class="busy-spinner" aria-hidden="true"></div>
             <div id="busy-text" class="busy-text"></div>
+        </div>
+    </div>
+
+    <!-- マニュアルの窓（スタッフモード中だけ開ける。タブで「前準備／公演前／公演中」を切り替える。本文は、各 .manual-panel の中に書く） -->
+    <div id="manual-overlay" class="manual-overlay" hidden>
+        <div class="manual-window" role="dialog" aria-modal="true" aria-labelledby="manual-title">
+            <div class="manual-header">
+                <h2 id="manual-title" class="manual-title">📖 マニュアル</h2>
+                <button id="manual-close" class="manual-close" type="button">閉じる</button>
+            </div>
+            <div class="manual-tabs" role="tablist">
+                <button class="manual-tab is-active" type="button" role="tab" id="manual-tab-prep" data-manual-tab="prep" aria-selected="true" aria-controls="manual-panel-prep">事前設定</button>
+                <button class="manual-tab" type="button" role="tab" id="manual-tab-before" data-manual-tab="before" aria-selected="false" aria-controls="manual-panel-before">公演前</button>
+                <button class="manual-tab" type="button" role="tab" id="manual-tab-during" data-manual-tab="during" aria-selected="false" aria-controls="manual-panel-during">公演中</button>
+            </div>
+            <div class="manual-body">
+                <div id="manual-panel-prep" class="manual-panel is-active" role="tabpanel" aria-labelledby="manual-tab-prep">
+                    <h3 class="manual-heading">事前設定</h3>
+                    <ul class="manual-list">
+                        <li>充電</li>
+                        <li>wifi設定</li>
+                        <li>home 画面登録</li>
+                        <li>ver.確認</li>
+                        <li>(キオスク化?)</li>
+                    </ul>
+                </div>
+                <div id="manual-panel-before" class="manual-panel" role="tabpanel" aria-labelledby="manual-tab-before">
+                    <h3 class="manual-heading">公演前 (転換時)</h3>
+                    <ol class="manual-list">
+                        <li>スタッフモードへ [413]</li>
+                        <li>チーム番号設定</li>
+                        <li>オールリセット(タイトル画面へ)</li>
+                        <li>チーム番号を確認して、テーブルに置く</li>
+                    </ol>
+                </div>
+                <div id="manual-panel-during" class="manual-panel" role="tabpanel" aria-labelledby="manual-tab-during">
+                    <h3 class="manual-heading">公演中</h3>
+                    <ul class="manual-list">
+                        <li><b>通常時</b> … 基本は画面指示通り。<br>OKを押すか、画面下部の指示通りに行う</li>
+                        <li><b>トラブル時</b> … トークン、盤面、Score編集が行えます。</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -74,6 +117,9 @@
 
         <!-- オールリセット（スタッフ専用）。誤タップしにくいよう、操作ボタンから離して左上の隅に置く。押すと確認を2回聞く -->
         <button id="reset-btn" class="btn btn-warning btn-inline staff-only reset-corner-btn" type="button">🔄 オールリセット</button>
+
+        <!-- マニュアル（スタッフ専用）。オールリセットの下に、誤タップしないよう間をあけて置く。押すと、マニュアルの窓が開く -->
+        <button id="manual-btn" class="btn btn-secondary btn-inline staff-only manual-corner-btn" type="button">📖 マニュアル</button>
 
         <h1 id="app-title"><img class="title-logo" src="images/title-logo.png" alt="" draggable="false"> はろなぞ4<br><small>Bingo Card Support</small></h1>
 

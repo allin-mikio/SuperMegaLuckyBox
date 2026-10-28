@@ -34,6 +34,7 @@ class LuckyBoxUI {
         // 出たら、いまの状態から流れを組み立て直す
         document.addEventListener('staffmodechange', (event) => {
             if (event.detail.on) this.bonusSelection = null;
+            else this._staffFromTitle = false;
             this.updateBingoFlow();
         });
         // スタッフモードを終えたら、シール編集も終える
@@ -46,8 +47,11 @@ class LuckyBoxUI {
         // 暗証番号でスタッフモードに入った直後の yes / no。画面（スタッフモードの帯）が出てから聞く
         document.addEventListener('staffentered', (event) => {
             const fromTitle = !!(event.detail && event.detail.fromTitle);
+            this._staffFromTitle = fromTitle;
+            this._applyPartDom();
             setTimeout(() => this.onStaffEntered(fromTitle), 200);
         });
+        this.setupManual();
         // 作業メッセージ: 「閉じる」で消す。スタッフモードを出たときも消す
         const noticeClose = document.getElementById('staff-notice-close');
         if (noticeClose) noticeClose.addEventListener('click', () => this.hideStaffNotice());
@@ -60,6 +64,40 @@ class LuckyBoxUI {
             this.renderTokenHud();
         });
         this.initializeGame();
+    }
+
+    // マニュアルの窓: 「📖 マニュアル」で開く。タブ（前準備／公演前／公演中）で内容を切り替える。
+    // スタッフモードを出たら、閉じる（ユーザーに見えたままにならないように）。本文は index.html の .manual-panel に書く
+    setupManual() {
+        const overlay = document.getElementById('manual-overlay');
+        const openBtn = document.getElementById('manual-btn');
+        const closeBtn = document.getElementById('manual-close');
+        if (!overlay || !openBtn) return;
+        const tabs = Array.from(overlay.querySelectorAll('[data-manual-tab]'));
+        const panels = Array.from(overlay.querySelectorAll('.manual-panel'));
+        const body = overlay.querySelector('.manual-body');
+
+        const selectTab = (name) => {
+            tabs.forEach((tab) => {
+                const on = tab.dataset.manualTab === name;
+                tab.classList.toggle('is-active', on);
+                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panels.forEach((panel) => panel.classList.toggle('is-active', panel.id === `manual-panel-${name}`));
+            if (body) body.scrollTop = 0;
+        };
+        const close = () => { overlay.hidden = true; };
+
+        openBtn.addEventListener('click', () => { overlay.hidden = false; });
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        // 窓の外（暗い部分）をタップしても閉じる
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close();
+        });
+        tabs.forEach((tab) => tab.addEventListener('click', () => selectTab(tab.dataset.manualTab)));
+        document.addEventListener('staffmodechange', (event) => {
+            if (!event.detail.on) close();
+        });
     }
 
     // パートの表示名
@@ -243,6 +281,7 @@ class LuckyBoxUI {
             puzzleBtn.classList.toggle('is-auto', autoPuzzle);
         }
         if (bingoBtn) bingoBtn.classList.toggle('is-auto', !autoPuzzle);
+
     }
 
     /* ---------------- ビンゴパートの流れ（① 番号 → ② 盤面 → ③ ボーナス） ---------------- */
@@ -976,6 +1015,12 @@ class LuckyBoxUI {
         box.hidden = false;
     }
 
+    // confirm() は画面の描き直しを止めてしまうので、メッセージを出してから少し待って、描画してから確認を出す
+    async showStaffNoticeBeforeConfirm(text) {
+        this.showStaffNotice(text);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+
     hideStaffNotice() {
         const box = document.getElementById('staff-notice');
         if (box) box.hidden = true;
@@ -1000,11 +1045,15 @@ class LuckyBoxUI {
         if (!this.gameState || !window.StaffMode || !this.isStaffNow()) return;
         const round = this.gameState.round_num ?? 1;
 
+        // どこから入ったかで、帯のボタンの「戻る／進む」の文言が変わる（_applyPartDom）
+        this._staffFromTitle = !!fromTitle;
+        this._applyPartDom();
+
         // 謎解きパートから入ったとき（ラウンド1〜4）: ビンゴパートの準備の手順を出しっぱなしで表示する。ラウンド4だけ「Last シール処理」が入る
         if (round >= 1 && round <= 4 && !fromTitle && this.part === 'puzzle') {
             const steps = round === 4
-                ? ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'LB Last シール処理 !!!', 'ユーザーモード(ビンゴパート)に戻る']
-                : ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'ユーザーモード(ビンゴパート)に戻る'];
+                ? ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'LB Last シール処理 !!!', 'ユーザーモード(ビンゴパート)へ']
+                : ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'ユーザーモード(ビンゴパート)へ'];
             this.showStaffNotice([`※ ラウンド${round}ビンゴパート準備`].concat(steps.map((step, i) => `${i + 1}.${step}`)).join('\n'));
             return;
         }
@@ -1019,6 +1068,8 @@ class LuckyBoxUI {
         // ビンゴパートから入ったとき（ラウンド1〜3）: ラウンド終了の確認
         if (round >= 1 && round <= 3 && !fromTitle) {
             const star = this.gameState.star_tokens || 0;
+            // 確認のダイアログの裏に、手順を画面の下へ出しっぱなしにする（キャンセルしたときも、手順を見ながら手動で進められる）
+            await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了処理\n2.ユーザーモード(謎解きパート)へ`);
             if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？\n（星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します）`)) return;
             const ended = await this.endRound({ skipConfirm: true });
             if (!ended || !this.isStaffNow()) return;
@@ -1038,6 +1089,7 @@ class LuckyBoxUI {
             return;
         }
 
+        await this.showStaffNoticeBeforeConfirm('※ チュートリアル終了処理\n1.チュートリアル終了処理\n2.ユーザーモード(謎解きパート)へ');
         if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？\n（雷 0・月 1・星 0 にして、チュートリアルカードを非表示にします）')) return;
         const ended = await this.endRound({ skipConfirm: true });
         if (!ended || !this.isStaffNow()) return;
