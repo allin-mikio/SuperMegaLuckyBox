@@ -1087,10 +1087,9 @@ class LuckyBoxUI {
 
         // ビンゴパートから入ったとき（ラウンド1〜3）: ラウンド終了の確認
         if (round >= 1 && round <= 3 && !fromTitle) {
-            const star = this.gameState.star_tokens || 0;
             // 確認のダイアログの裏に、手順を画面の下へ出しっぱなしにする（キャンセルしたときも、手順を見ながら手動で進められる）
             await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了処理\n2.ユーザーモード(謎解きパート)へ${round === 3 ? '\n3.タブレットは回収' : ''}`, round === 3 ? ['3.タブレットは回収'] : []);
-            if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？\n（星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します）`)) return;
+            if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？${round === 3 ? '\n\n★ タブレットは回収 ★' : ''}`)) return;
             const ended = await this.endRound({ skipConfirm: true });
             if (!ended || !this.isStaffNow()) return;
             this._setPart('puzzle');
@@ -1110,7 +1109,7 @@ class LuckyBoxUI {
         }
 
         await this.showStaffNoticeBeforeConfirm('※ チュートリアル終了処理\n1.チュートリアル終了処理\n2.ユーザーモード(謎解きパート)へ');
-        if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？\n（雷 0・月 1・星 0 にして、チュートリアルカードを非表示にします）')) return;
+        if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？')) return;
         const ended = await this.endRound({ skipConfirm: true });
         if (!ended || !this.isStaffNow()) return;
         this._setPart('puzzle');
