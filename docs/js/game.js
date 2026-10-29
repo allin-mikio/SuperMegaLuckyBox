@@ -924,9 +924,11 @@ class LuckyBoxUI {
         const round = this.gameState.round_num ?? 1;
         if (round > 4) return false;
         const star = this.gameState.star_tokens || 0;
+        // スプシへの自動送信は、ラウンド1〜3の終了時だけ。ラウンド4は、Ex のチェックのあと、手動の「結果送信」で送る
+        const autoSend = round >= 1 && round <= 3;
         const message = round === 0
             ? 'チュートリアルを終了しますか？\n雷 0・月 1・星 0 にして、ラウンド1を始めます。'
-            : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します。`;
+            : `ラウンド${round}を終了しますか？\n星 ${star}個を記録して、星を 0 に戻し${autoSend ? '、Scores をスプシに送信します' : ''}。`;
         if (this._endingRound) return false;
         if (!options.skipConfirm) {
             // 謎解きパートからボタンで終了するのは、ふつうの流れではない（ビンゴパートからスタッフモードに入って終えるのが通常）。
@@ -937,9 +939,11 @@ class LuckyBoxUI {
 
         this._endingRound = true;
         // 処理が終わるまで（通信を含む）、画面全体をふさいで、誤タップを防ぐ
-        this.showBusy(round >= 1
+        this.showBusy(autoSend
             ? `ラウンド${round}終了処理中…\nScores をスプシに送信しています。\nそのままお待ちください`
-            : 'ラウンド0(チュートリアル)終了処理中…\nそのままお待ちください');
+            : round === 0
+                ? 'ラウンド0(チュートリアル)終了処理中…\nそのままお待ちください'
+                : `ラウンド${round}終了処理中…\nそのままお待ちください`);
         // 前回の送信結果の表示は、ここで消す
         clearTimeout(this._roundEndStatusTimer);
         const prevStatus = document.getElementById('round-end-status');
@@ -959,8 +963,8 @@ class LuckyBoxUI {
                 return false;
             }
 
-            // ラウンド1〜4の終了後は、更新された Scores をそのままスプシへ送信する（チュートリアル終了では送らない）
-            if (round >= 1) {
+            // ラウンド1〜3の終了後は、更新された Scores をそのままスプシへ送信する（チュートリアル終了とラウンド4終了では送らない）
+            if (autoSend) {
                 await this.submitScoreToSheet();
                 const statusEl = document.getElementById('score-submit-status');
                 // 送信の結果は、ボタンのそばにも表示する
