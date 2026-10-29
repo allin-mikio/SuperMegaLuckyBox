@@ -1006,18 +1006,35 @@ class LuckyBoxUI {
 
     // スタッフモード中の作業メッセージ。出しっぱなしで、後ろの画面はふつうに操作できる。「閉じる」か、スタッフモードを出ると消える
     // kind: メッセージの種類（あとで追記するときの目印。例: 'round4-end'）
-    showStaffNotice(text, kind = '') {
+    // emphasizeLines: text の中の、目立たせたい行（行の文字列が、そのまま一致するもの）。赤・太字・下線（.staff-notice-em）で表示する
+    showStaffNotice(text, kind = '', emphasizeLines = []) {
         const box = document.getElementById('staff-notice');
         const textEl = document.getElementById('staff-notice-text');
         if (!box || !textEl) return;
-        textEl.textContent = text;
+        textEl.textContent = '';
+        String(text).split('\n').forEach((line, i) => {
+            if (i > 0) textEl.appendChild(document.createTextNode('\n'));
+            this.appendNoticeLine(textEl, line, emphasizeLines.includes(line));
+        });
         this._staffNoticeKind = kind;
         box.hidden = false;
     }
 
+    // 作業メッセージに 1 行を足す（emphasized なら、目立たせる）
+    appendNoticeLine(textEl, line, emphasized) {
+        if (emphasized) {
+            const em = document.createElement('span');
+            em.className = 'staff-notice-em';
+            em.textContent = line;
+            textEl.appendChild(em);
+        } else {
+            textEl.appendChild(document.createTextNode(line));
+        }
+    }
+
     // confirm() は画面の描き直しを止めてしまうので、メッセージを出してから少し待って、描画してから確認を出す
-    async showStaffNoticeBeforeConfirm(text) {
-        this.showStaffNotice(text);
+    async showStaffNoticeBeforeConfirm(text, emphasizeLines = []) {
+        this.showStaffNotice(text, '', emphasizeLines);
         await new Promise((resolve) => setTimeout(resolve, 80));
     }
 
@@ -1054,7 +1071,10 @@ class LuckyBoxUI {
             const steps = round === 4
                 ? ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'LB Last シール処理 !!!', 'ユーザーモード(ビンゴパート)へ']
                 : ['トークンをテーブルから回収 & アプリに登録', 'LBカードを登録', 'ユーザーモード(ビンゴパート)へ'];
-            this.showStaffNotice([`※ ラウンド${round}ビンゴパート準備`].concat(steps.map((step, i) => `${i + 1}.${step}`)).join('\n'));
+            // ラウンド4の「LB Last シール処理」の行は、目立たせる
+            const lines = steps.map((step, i) => `${i + 1}.${step}`);
+            const emphasize = lines.filter((line) => line.includes('LB Last シール処理'));
+            this.showStaffNotice([`※ ラウンド${round}ビンゴパート準備`].concat(lines).join('\n'), '', emphasize);
             return;
         }
 
@@ -1069,7 +1089,7 @@ class LuckyBoxUI {
         if (round >= 1 && round <= 3 && !fromTitle) {
             const star = this.gameState.star_tokens || 0;
             // 確認のダイアログの裏に、手順を画面の下へ出しっぱなしにする（キャンセルしたときも、手順を見ながら手動で進められる）
-            await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了処理\n2.ユーザーモード(謎解きパート)へ`);
+            await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了処理\n2.ユーザーモード(謎解きパート)へ${round === 3 ? '\n3.タブレットは回収' : ''}`, round === 3 ? ['3.タブレットは回収'] : []);
             if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？\n（星 ${star}個を記録して、星を 0 に戻し、Scores をスプシに送信します）`)) return;
             const ended = await this.endRound({ skipConfirm: true });
             if (!ended || !this.isStaffNow()) return;
@@ -1551,9 +1571,12 @@ class LuckyBoxUI {
         const box = document.getElementById('staff-notice');
         const textEl = document.getElementById('staff-notice-text');
         if (box && textEl && !box.hidden && this._staffNoticeKind === 'round4-end') {
-            if (!textEl.textContent.endsWith(done)) textEl.textContent = `${textEl.textContent}\n${done}`;
+            if (!textEl.textContent.endsWith(done)) {
+                textEl.appendChild(document.createTextNode('\n'));
+                this.appendNoticeLine(textEl, done, true);
+            }
         } else {
-            this.showStaffNotice(done, 'done'); // 作業メッセージを閉じていたときは、この一言だけ出す
+            this.showStaffNotice(done, 'done', [done]); // 作業メッセージを閉じていたときは、この一言だけ出す
         }
     }
 

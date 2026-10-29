@@ -2217,6 +2217,16 @@ body.staff-mode .staff-only {
     line-height: 1.4;
 }
 
+/* メッセージの中で、特に目立たせたい 1 行 */
+.staff-notice-em {
+    color: #D50000;
+    font-weight: 900;
+    font-size: 1.1em;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
 .staff-notice-close {
     flex: none;
     padding: 8px 14px;
