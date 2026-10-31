@@ -1899,6 +1899,13 @@ class LuckyBoxUI {
     // 「Complete」ボタン: カードをカレントのプールから外して、コンプリートのプールへ移す
     // 移せたら true
     async completeCard(cardIndex) {
+        // 自動遷移の保留中（全マス黒だが、ボーナス欄がまだ全部グレーになっていない）のカードは、ユーザーモードでは移さない。
+        // ボーナスの処理の途中でカードが消えて、残りのボーナスが見えない場所に残る混乱を防ぐ（ボタンの表示はそのまま、押しても何も起きない）。
+        // ボーナスがすべてグレーになれば、自動で移る。スタッフモードでは、Undo やトラブル対応のため、これまでどおり押せる
+        if (this.flowEnforced()) {
+            const cardEl = document.querySelector(`#cards-container .bingo-card[data-card-index="${cardIndex}"]`);
+            if (cardEl && !Array.from(cardEl.querySelectorAll('.bonus-cell')).every((el) => el.classList.contains('used'))) return false;
+        }
         try {
             const result = await this.apiCall('complete_card', { card_index: cardIndex });
             if (result && result.success) {

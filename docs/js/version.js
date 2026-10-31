@@ -2,4 +2,4 @@
 // 画面下部に表示され、Service Worker のキャッシュ名にも使われる。
 // ファイルを変更して公開するときは、必ずここを更新すること（更新しないと端末に反映されない）。
 // 更新したら、sync_sw_version.bat を実行して sw.js の SW_BUILD もそろえること（iPad が更新を検知するために必要）。
-var APP_VERSION = '2.01.20';
+var APP_VERSION = '2.01.21';
