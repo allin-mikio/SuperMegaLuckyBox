@@ -1091,9 +1091,19 @@ class LuckyBoxUI {
 
         // ビンゴパートから入ったとき（ラウンド1〜3）: ラウンド終了の確認
         if (round >= 1 && round <= 3 && !fromTitle) {
-            // 確認のダイアログの裏に、手順を画面の下へ出しっぱなしにする（キャンセルしたときも、手順を見ながら手動で進められる）
-            await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了処理\n2.ユーザーモード(謎解きパート)へ${round === 3 ? '\n3.タブレットは回収' : ''}`, round === 3 ? ['3.タブレットは回収'] : []);
-            if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？${round === 3 ? '\n\n★ タブレットは回収 ★' : ''}`)) return;
+            // ラウンド3: 確認のダイアログも自動の終了処理もなし。手順を出しっぱなしにして、スタッフが順に行う
+            // （ラウンド3終了ボタン → 得点の確認 → タブレット回収 → 「ユーザーモード(謎解きパート)へ」）
+            if (round === 3) {
+                this.showStaffNotice(
+                    '※ ラウンド3終了処理\n1.ラウンド3終了ボタンを押す\n2.現在の得点をプレイヤーと確認\n3.タブレットは回収\n4.ユーザーモード(謎解きパート)へ',
+                    'round3-end',
+                    ['2.現在の得点をプレイヤーと確認', '3.タブレットは回収']
+                );
+                return;
+            }
+            // ラウンド1・2: 確認のダイアログの裏に、手順を画面の下へ出しっぱなしにする（キャンセルしたときも、手順を見ながら手動で進められる）
+            await this.showStaffNoticeBeforeConfirm(`※ ラウンド${round}終了処理\n1.ラウンド${round}終了ボタンを押す\n2.ユーザーモード(謎解きパート)へ`);
+            if (!confirm(`ラウンド${round}終了処理を行い、ラウンド${round + 1} 謎解きパートへ進みますか？`)) return;
             const ended = await this.endRound({ skipConfirm: true });
             if (!ended || !this.isStaffNow()) return;
             this._setPart('puzzle');
@@ -1112,8 +1122,11 @@ class LuckyBoxUI {
             return;
         }
 
-        await this.showStaffNoticeBeforeConfirm('※ チュートリアル終了処理\n1.チュートリアル終了処理\n2.ユーザーモード(謎解きパート)へ');
-        if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？')) return;
+        await this.showStaffNoticeBeforeConfirm(
+            '※ チュートリアル終了処理\n1.チュートリアル終了ボタンを押す\n2.ユーザーモード(謎解きパート)へ\n3.チュートリアル LBカードは回収',
+            ['3.チュートリアル LBカードは回収']
+        );
+        if (!confirm('チュートリアル終了処理を行い、ラウンド1 謎解きパートへ進みますか？\n\n★ チュートリアル LBカードは回収 ★')) return;
         const ended = await this.endRound({ skipConfirm: true });
         if (!ended || !this.isStaffNow()) return;
         this._setPart('puzzle');

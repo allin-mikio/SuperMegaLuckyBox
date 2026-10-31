@@ -2198,17 +2198,29 @@ body.staff-mode .staff-only {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
-    background: #FFF3E0;
-    border: 3px solid #E65100;
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-    color: #4B2A00;
+    padding: 12px 14px;
+    /* 目立たせる: スタッフモードの帯と同じ濃い紫の地に、白い太い枠と濃い影。出た瞬間に 1 回だけ、ふわっと拡大して戻る */
+    background: #4B0082;
+    border: 5px solid #FFFFFF;
+    border-radius: 14px;
+    box-shadow: 0 0 0 2px #4B0082, 0 8px 24px rgba(0, 0, 0, 0.6);
+    color: #FFFFFF;
     font-weight: bold;
+    animation: staff-notice-pop 0.35s ease-out;
 }
 
 .staff-notice[hidden] {
     display: none;
+}
+
+@keyframes staff-notice-pop {
+    0% { transform: translateX(-50%) scale(0.92); opacity: 0.4; }
+    60% { transform: translateX(-50%) scale(1.03); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .staff-notice { animation: none; }
 }
 
 .staff-notice-text {
@@ -2219,7 +2231,7 @@ body.staff-mode .staff-only {
 
 /* メッセージの中で、特に目立たせたい 1 行 */
 .staff-notice-em {
-    color: #D50000;
+    color: #FFEB3B; /* 濃い紫の地の上で読める黄色 */
     font-weight: 900;
     font-size: 1.1em;
     text-decoration: underline;
@@ -2230,10 +2242,10 @@ body.staff-mode .staff-only {
 .staff-notice-close {
     flex: none;
     padding: 8px 14px;
-    border: 2px solid #E65100;
+    border: 2px solid #FFFFFF;
     border-radius: 10px;
     background: #FFFFFF;
-    color: #E65100;
+    color: #4B0082;
     font-family: inherit;
     font-size: 1rem;
     font-weight: 900;
